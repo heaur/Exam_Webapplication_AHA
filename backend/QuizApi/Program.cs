@@ -1,3 +1,4 @@
+using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
@@ -17,7 +18,17 @@ builder.Services.AddCors(options =>
         });
 });
 
+
 var app = builder.Build();
+
+// Configure Serilog for logging
+var logger = new LoggerConfiguration()
+    .WriteTo.File($"Logs/log_{DateTime.Now:yyyyMMdd_HHmmss}.txt")
+    .CreateLogger();
+
+// Replace default logging with Serilog
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog(logger);
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
