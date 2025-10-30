@@ -1,49 +1,50 @@
+using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using QuizApi.DAL;
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services.AddControllers(); // Enable controller support
+// logging with Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+builder.Logging.ClearProviders();
+builder.Logging.AddSerilog();
+
+// services
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(o =>
+        o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles); // avoid JSON cycles in dev
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS (frontend-backend communication)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:5173") // Vite dev server
-                  .AllowAnyHeader()
-                  .AllowAnyMethod();
-        });
-});
-
-
-var app = builder.Build();
-
-// Configure Serilog for logging
-var logger = new LoggerConfiguration()
-    .WriteTo.File($"Logs/log_{DateTime.Now:yyyyMMdd_HHmmss}.txt")
-    .CreateLogger();
-
-// Replace default logging with Serilog
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog(logger);
-
-// JSON options to handle reference loops
-builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler =
-        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
-
-// Configure Entity Framework and SQLite
+// EF Core (SQLite)
 builder.Services.AddDbContext<QuizDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// CORS (frontend on Vite)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod());
+});
 
-// Configure the HTTP request pipeline
+var app = builder.Build();
+
+// (Optional) Auto-create DB schema for MVP
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+    db.Database.EnsureCreated();
+}
+
+// pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -51,11 +52,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-app.UseCors("AllowFrontend"); // Enable CORS policy
-
+app.UseCors("AllowFrontend");
 app.UseAuthorization();
-
-app.MapControllers(); // Connect controllers to the app
+app.MapControllers();
 
 app.Run();
