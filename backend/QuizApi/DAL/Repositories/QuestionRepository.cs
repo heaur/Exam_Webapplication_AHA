@@ -1,12 +1,12 @@
 using Microsoft.EntityFrameworkCore;
-using QuizApp.DAL.Interfaces;
-using QuizApp.Models;
+using QuizApi.DAL.Interfaces;
+using QuizApi.Domain;
 
-namespace QuizApp.DAL.Repositories
+namespace QuizApi.DAL.Repositories
 {
     public class QuestionRepository : GenericRepository<Question>, IQuestionRepository
     {
-        public QuestionRepository(QuizDBContext db) : base(db) { }
+        public QuestionRepository(QuizDbContext db) : base(db) { }
 
         public async Task<IEnumerable<Question>> GetByQuizIdAsync(int quizId, bool includeOptions = true, CancellationToken ct = default)
         {

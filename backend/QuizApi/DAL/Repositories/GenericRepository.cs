@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-using QuizApp.DAL.Interfaces;
-using QuizApp.Models;
+using QuizApi.DAL.Interfaces;
+using QuizApi.Domain;
 
-namespace QuizApp.DAL.Repositories
+namespace QuizApi.DAL.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected readonly QuizDBContext _db;
+        protected readonly QuizDbContext _db;
         protected readonly DbSet<T> _set;
 
-        public GenericRepository(QuizDBContext db)
+        public GenericRepository(QuizDbContext db)
         {
             _db = db;
             _set = db.Set<T>();

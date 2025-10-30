@@ -1,4 +1,4 @@
-namespace QuizApp.DAL.Interfaces
+namespace QuizApi.DAL.Interfaces
 {
     public interface IUnitOfWork : IAsyncDisposable
     {

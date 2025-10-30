@@ -1,6 +1,6 @@
-using QuizApp.Models;
+using QuizApi.Domain;
 
-namespace QuizApp.DAL.Interfaces
+namespace QuizApi.DAL.Interfaces
 {
     public interface IQuizRepository : IGenericRepository<Quiz>
     {

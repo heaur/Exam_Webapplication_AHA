@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
-namespace QuizApp.Models
+namespace QuizApi.Domain
 {
     public class User
     {

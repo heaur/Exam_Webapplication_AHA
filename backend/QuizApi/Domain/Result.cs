@@ -2,7 +2,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace QuizApp.Models
+namespace QuizApi.Domain
 {
     /// <summary>
     /// Representerer et resultat av en bruker som har tatt en quiz.

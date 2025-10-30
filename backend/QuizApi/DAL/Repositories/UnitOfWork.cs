@@ -1,18 +1,18 @@
 using Microsoft.EntityFrameworkCore.Storage;
-using QuizApp.DAL.Interfaces;
-using QuizApp.Models;
+using QuizApi.DAL.Interfaces;
+using QuizApi.Domain;
 
-namespace QuizApp.DAL.Repositories
+namespace QuizApi.DAL.Repositories
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly QuizDBContext _db;
+        private readonly QuizDbContext _db;
         private IDbContextTransaction? _tx;
 
         public IQuizRepository Quizzes { get; }
         public IQuestionRepository Questions { get; }
 
-        public UnitOfWork(QuizDBContext db, IQuizRepository quizRepo, IQuestionRepository questionRepo)
+        public UnitOfWork(QuizDbContext db, IQuizRepository quizRepo, IQuestionRepository questionRepo)
         {
             _db = db;
             Quizzes = quizRepo;

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace QuizApp.DAL.Interfaces
+namespace QuizApi.DAL.Interfaces
 {
     public interface IGenericRepository<T> where T : class
     {

@@ -1,4 +1,7 @@
 using Serilog;
+using QuizApi.DAL;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
@@ -29,6 +32,16 @@ var logger = new LoggerConfiguration()
 // Replace default logging with Serilog
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog(logger);
+
+// JSON options to handle reference loops
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler =
+        System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
+
+// Configure Entity Framework and SQLite
+builder.Services.AddDbContext<QuizDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

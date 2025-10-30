@@ -1,11 +1,11 @@
-using System.Reflection.Metadata;
 using Microsoft.EntityFrameworkCore;
+using QuizApi.Domain;
 
-namespace QuizApp.Models
+namespace QuizApi.DAL
 {
-    public class QuizDBContext : DbContext
+    public class QuizDbContext : DbContext
     {
-        public QuizDBContext(DbContextOptions<QuizDBContext> options) : base(options) { }
+        public QuizDbContext(DbContextOptions<QuizDbContext> options) : base(options) { }
 
         // DbSet-er (match dine modeller)
         public DbSet<Quiz> Quizzes { get; set; } = default!;
