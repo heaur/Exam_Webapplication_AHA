@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "UQ1Z1zo6tQw=",
+  "dgSpecHash": "ugqER6StLsc=",
   "success": true,
   "projectFilePath": "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
   "expectedPackageFiles": [
@@ -57,6 +57,7 @@
     "C:\\Users\\Hedda\\.nuget\\packages\\mono.texttemplating\\3.0.0\\mono.texttemplating.3.0.0.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\serilog\\4.2.0\\serilog.4.2.0.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\serilog.extensions.logging\\9.0.2\\serilog.extensions.logging.9.0.2.nupkg.sha512",
+    "C:\\Users\\Hedda\\.nuget\\packages\\serilog.sinks.console\\6.0.0\\serilog.sinks.console.6.0.0.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\serilog.sinks.file\\7.0.0\\serilog.sinks.file.7.0.0.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.10\\sqlitepclraw.bundle_e_sqlite3.2.1.10.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\sqlitepclraw.core\\2.1.10\\sqlitepclraw.core.2.1.10.nupkg.sha512",
