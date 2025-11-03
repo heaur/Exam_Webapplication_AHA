@@ -6,6 +6,7 @@ using QuizApi.DAL.Interfaces;
 using QuizApi.DAL.Repositories;
 using QuizApi.Application.Services;
 using QuizApi.Application.Interfaces;
+using QuizApi.DAL;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,6 +36,7 @@ builder.Services.AddDbContext<QuizDbContext>(opt =>
 builder.Services.AddScoped<IQuizRepository, QuizRepository>();
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
 // Application Services
