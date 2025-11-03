@@ -40,11 +40,15 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
 // Application Services
-builder.Services.AddScoped<IQuizService, QuizService>();
+
+// Disse kan implementeres når Service klassee og interface er ferdig kodet
+
+/* builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
-builder.Services.AddScoped<IOptionService, OptionService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IResultService, ResultService>();
+builder.Services.AddScoped<IResultService, ResultService>(); */
+
+builder.Services.AddScoped<IOptionService, OptionService>(); // Ferdig
 
 // CORS (frontend on Vite)
 builder.Services.AddCors(options =>
