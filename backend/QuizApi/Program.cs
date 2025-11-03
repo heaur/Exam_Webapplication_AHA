@@ -1,7 +1,11 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using QuizApi.DAL;
+// using QuizApi.DAL;
+using QuizApi.DAL.Interfaces;
+using QuizApi.DAL.Repositories;
+using QuizApi.Application.Services;
+using QuizApi.Application.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +30,19 @@ builder.Services.AddSwaggerGen();
 // EF Core (SQLite)
 builder.Services.AddDbContext<QuizDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// DAL Repositories
+builder.Services.AddScoped<IQuizRepository, QuizRepository>();
+builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
+builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+
+
+// Application Services
+builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<IOptionService, OptionService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IResultService, ResultService>();
 
 // CORS (frontend on Vite)
 builder.Services.AddCors(options =>
