@@ -1,25 +1,38 @@
 using Microsoft.AspNetCore.Mvc;
 
 namespace QuizApi.Controllers
-
-
-//Dette er en test for å teste om frontend og backend fungerer sammen
 {
     [ApiController]
     [Route("api/[controller]")]
     public class QuizController : ControllerBase
     {
+        private readonly ILogger<QuizController> _logger;
+
+        // Constructor for dependency injection of the logger
+        public QuizController(ILogger<QuizController> logger)
+        {
+            _logger = logger;
+        }
+
         [HttpGet]
         public IActionResult GetAll()
         {
-            var quizzes = new[]
+            try
             {
-                new { Id = 1, Title = "C# Basics", QuestionCount = 5 },
-                new { Id = 2, Title = "ASP.NET Fundamentals", QuestionCount = 10 }
-            };
+                _logger.LogInformation("Fetching all quizzes");
 
-            return Ok(quizzes);
+                var quizzes = new[]
+                {
+                    new { Id = 1, Title = "Sample Quiz" }
+                };
+
+                return Ok(quizzes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to fetch quizzes");
+                return StatusCode(500, "An unexpected error occurred.");
+            }
         }
     }
 }
-// Her slutter testen
