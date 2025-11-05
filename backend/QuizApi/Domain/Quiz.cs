@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -6,20 +7,33 @@ namespace QuizApi.Domain
     public class Quiz
     {
         [Key]
-        public int QuizId { get; set; } //PK
+        public int QuizId { get; set; } // PK
 
+        // Quiz title and description
         [Required]
         [MaxLength(55)]
-        public string Title { get; set; } = string.Empty; //default value
+        public string Title { get; set; } = string.Empty;
 
         [MaxLength(255)]
-        public string? Description { get; set; } //makes nullable
+        public string? Description { get; set; }
 
-        //Defines who is owner/created the Quiz
-        public int OwnerId { get; set; } //FK
-        public User Owner { get; set; } = default!; //initialiserer med default
+        // Owner of the quiz
+        public int? OwnerId { get; set; }   // FK to User
+        public User? Owner { get; set; }    
 
-        //Lists all questions in the quiz
-        public List<Question> Questions { get; set; } = new(); //initialiserer en tom liste
+        // Timestamps
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
+
+        // Publication status
+        [Required]
+        public bool IsPublished { get; set; } = false;
+
+        public DateTime? PublishedAt { get; set; }
+
+        // Relation to Questions
+        public List<Question> Questions { get; set; } = new(); // empty list to avoid null
     }
 }
