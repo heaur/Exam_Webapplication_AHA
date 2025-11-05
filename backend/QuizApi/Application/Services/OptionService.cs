@@ -30,24 +30,32 @@ public class OptionService : IOptionService
     }
 
     // Methods
+    // READ single option by id
     public async Task<OptionReadDto?> GetByIdAsync(int optionId, CancellationToken ct = default)
     {
         var entity = await _options.GetByIdAsync(optionId, ct);
-        return entity is null
+        return entity is null // Option not found
             ? null
             : new OptionReadDto(entity.OptionID, entity.Text, entity.IsCorrect, entity.QuestionId);
+            // Return the found option as OptionReadDto
     }
-    public async Task<IEnumerable<OptionReadDto>> GetByQuestionIdAsync(int questionId, CancellationToken ct = default)
-    {
-        if (questionId <= 0) throw new ArgumentException("Invalid question id");
+    
+    // READ list of options by question id
+    public async Task<IReadOnlyList<OptionReadDto>> GetByQuestionIdAsync(int questionId, CancellationToken ct = default)
+{
+    if (questionId <= 0) throw new ArgumentException("Invalid question id", nameof(questionId));
 
-        var all = await _options.GetAllAsync(ct);
-        var list = all.Where(o => o.QuestionId == questionId);
+    var all = await _options.GetAllAsync(ct);
+    var items = all
+        .Where(o => o.QuestionId == questionId)
+        .Select(o => new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId))
+        .ToList();
 
-        return list.Select(o => new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
-    }
+    return items; // Return the list of OptionReadDto
+}
 
 
+    // CREATE
     public async Task<OptionReadDto> CreateAsync(OptionCreateDto dto, CancellationToken ct = default)
     {
         ValidateCreate(dto);
@@ -69,8 +77,10 @@ public class OptionService : IOptionService
         _logger.LogInformation("Created option {OptionId} for question {QuestionId}", entity.OptionID, entity.QuestionId);
 
         return new OptionReadDto(entity.OptionID, entity.Text, entity.IsCorrect, entity.QuestionId);
+        // Return the created option as OptionReadDto
     }
 
+    // UPDATE
     public async Task<OptionReadDto> UpdateAsync(int id, OptionUpdateDto dto, CancellationToken ct = default)
     {
         ValidateUpdate(dto);
@@ -87,8 +97,10 @@ public class OptionService : IOptionService
         _logger.LogInformation("Updated option {OptionId}", id);
 
         return new OptionReadDto(entity.OptionID, entity.Text, entity.IsCorrect, entity.QuestionId);
+        // Return the updated option as OptionReadDto
     }
 
+    // DELETE
     public async Task<bool> DeleteAsync(int optionId, CancellationToken ct = default)
     {
         var entity = await _options.GetByIdAsync(optionId, ct);
@@ -98,10 +110,11 @@ public class OptionService : IOptionService
         await _uow.SaveChangesAsync(ct);
 
         _logger.LogInformation("Deleted option {OptionId}", optionId);
-        return true;
+        return true; // Return true if deletion was successful
     }
 
 
+    // Validation methods for create
     private static void ValidateCreate(OptionCreateDto dto)
     {
         if (dto is null) throw new ArgumentNullException(nameof(dto));
@@ -109,6 +122,7 @@ public class OptionService : IOptionService
         if (dto.QuestionId <= 0) throw new ArgumentException("QuestionId must be > 0");
     }
 
+    // Validation for update
     private static void ValidateUpdate(OptionUpdateDto dto)
     {
         if (dto is null) throw new ArgumentNullException(nameof(dto));
