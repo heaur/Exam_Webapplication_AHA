@@ -40,12 +40,9 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
 // Application Services
-
-// Disse kan implementeres når Service klassee og interface er ferdig kodet
-
 builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
-// builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>();
 builder.Services.AddScoped<IOptionService, OptionService>();
 
