@@ -43,12 +43,11 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Disse kan implementeres når Service klassee og interface er ferdig kodet
 
-/* builder.Services.AddScoped<IQuizService, QuizService>();
+builder.Services.AddScoped<IQuizService, QuizService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IResultService, ResultService>(); */
-
-builder.Services.AddScoped<IOptionService, OptionService>(); // DONE
+// builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IResultService, ResultService>();
+builder.Services.AddScoped<IOptionService, OptionService>();
 
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(QuizApi.Application.Mapping.MappingProfile));
