@@ -1,6 +1,6 @@
 namespace QuizApi.Application.Services
 {
-    public class QuestionService
+    public class QuestionService : IQuestionService
     {
         
     }
