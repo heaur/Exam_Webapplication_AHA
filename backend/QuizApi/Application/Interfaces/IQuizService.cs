@@ -17,9 +17,9 @@ namespace QuizApi.Application.Interfaces
         Task<IReadOnlyList<QuizReadDto>> ListAsync(
             int page = 1,
             int pageSize = 20,
-            string? search = null,      // f.eks. søk i tittel
-            int? ownerId = null,        // eller annen filter-dimensjon
-            bool? isPublished = null,   // filtrer på publiseringsstatus
+            string? search = null,      // Search by title or description
+            int? ownerId = null,        // or other filter dimension
+            bool? isPublished = null,   // filter by publication status
             CancellationToken ct = default);
 
         Task<int> CountAsync(
