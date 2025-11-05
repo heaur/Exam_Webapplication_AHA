@@ -4,42 +4,38 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace QuizApi.Domain
 {
-    /// <summary>
-    /// Representerer et resultat av en bruker som har tatt en quiz.
-    /// Hver rad i denne tabellen lagrer hvilken bruker som tok quizen, 
-    /// hvilken quiz det gjaldt, hvor mange spørsmål som ble besvart riktig, 
-    /// totalt antall spørsmål, og når quizen ble fullført.
-    /// </summary>
     public class Result
     {
         [Key] 
-        public int ResultId { get; set; }    // Primærnøkkel for resultatet
+        public int ResultId { get; set; }    // PK
 
-        // ------------------- RELASJONER -------------------
-
-        [Required]
-        public int UserId { get; set; }      // Fremmednøkkel til brukeren som tok quizen
 
         [Required]
-        public int QuizId { get; set; }      // Fremmednøkkel til hvilken quiz dette resultatet gjelder
+        public int UserId { get; set; }      // FK to User
 
-        // ------------------- RESULTATDATA -------------------
+        [Required]
+        public int QuizId { get; set; }      // FK to Quiz
 
+
+        // Number of correct answers
         [Required]
         [Range(0, int.MaxValue, ErrorMessage = "Antall riktige kan ikke være negativt.")]
-        public int CorrectCount { get; set; }    // Antall riktige svar brukeren hadde
+        public int CorrectCount { get; set; }
 
+        // Total number of questions in the quiz
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Total spørsmål må være minst 1.")]
-        public int TotalQuestions { get; set; }  // Totalt antall spørsmål i quizen
+        public int TotalQuestions { get; set; }
 
+        // Timestamp for when the quiz was completed
         [Required]
         public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigasjonsreferanser nullable
+        // Navigation properties
         public User? User { get; set; }
         public Quiz? Quiz { get; set; }
 
+        // Computed property for percentage score
         [NotMapped]
         public double Percentage => TotalQuestions > 0
             ? (double)CorrectCount / TotalQuestions * 100.0
