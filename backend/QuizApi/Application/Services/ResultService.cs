@@ -3,153 +3,139 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoMapper;
 using Microsoft.Extensions.Logging;
 using QuizApi.Application.Interfaces;
 using QuizApi.DAL.Interfaces;
 using QuizApi.Domain;
 using QuizApi.DTOs;
 
-namespace QuizApi.Application.Services
+public class ResultService : IResultService
 {
-    public class ResultService : IResultService
+    // Dependencies
+    private readonly IGenericRepository<Result> _results;
+    private readonly IUnitOfWork _uow;
+    private readonly ILogger<ResultService> _logger;
+    private readonly IMapper _mapper; // AutoMapper for DTO <-> entity mapping
+
+    // Constructor
+    public ResultService(
+        IGenericRepository<Result> resultRepository,
+        IUnitOfWork uow,
+        ILogger<ResultService> logger,
+        IMapper mapper) // AutoMapper injected
     {
-        private readonly IResultRepository _results;
-        private readonly IUnitOfWork _uow;
-        private readonly ILogger<ResultService> _logger;
+        _results = resultRepository; // Injected generic repository for Result entity
+        _uow = uow; // Injected Unit of Work for transaction management
+        _logger = logger; // Injected logger for logging operations
+        _mapper = mapper; // Injected AutoMapper for DTO <-> entity mapping
+    }
 
-        public ResultService(
-            IResultRepository resultRepository,
-            IUnitOfWork uow,
-            ILogger<ResultService> logger)
+    // CREATE
+    public async Task<ResultReadDto> CreateAsync(ResultCreateDto dto, CancellationToken ct = default)
+    {
+        ValidateCreate(dto);
+
+        var entity = new Result
         {
-            _results = resultRepository;
-            _uow = uow;
-            _logger = logger;
-        }
+            UserId         = dto.UserId,
+            QuizId         = dto.QuizId,
+            CorrectCount   = dto.Score,
+            TotalQuestions = Math.Max(dto.Score, 1),
+            CompletedAt    = DateTime.UtcNow
+        };
 
-        // CREATE
-        public async Task<ResultReadDto> CreateAsync(ResultCreateDto dto, CancellationToken ct = default)
-        {
-            ValidateCreate(dto);
+        await _results.AddAsync(entity, ct);
+        await _uow.SaveChangesAsync(ct);
 
-            // Enkelt oppsett: Score -> CorrectCount, TotalQuestions settes minst 1
-            var entity = new Result
-            {
-                UserId         = dto.UserId,
-                QuizId         = dto.QuizId,
-                CorrectCount   = dto.Score,
-                TotalQuestions = Math.Max(dto.Score, 1),
-                CompletedAt    = DateTime.UtcNow
-            };
+        _logger.LogInformation("Created result {ResultId} for user {UserId} on quiz {QuizId}",
+            entity.ResultId, entity.UserId, entity.QuizId);
 
-            await _results.AddAsync(entity, ct);
-            await _uow.SaveChangesAsync(ct);
+        return _mapper.Map<ResultReadDto>(entity); // Return the created result as ResultReadDto
+    }
 
-            _logger.LogInformation("Created result {ResultId} for user {UserId} on quiz {QuizId}",
-                entity.ResultId, entity.UserId, entity.QuizId);
+    // READ single object by id
+    public async Task<ResultReadDto?> GetByIdAsync(int resultId, CancellationToken ct = default)
+    {
+        if (resultId <= 0) throw new ArgumentException("Invalid result id", nameof(resultId));
+        var entity = await _results.GetByIdAsync(resultId, ct);
+        return entity is null ? null : _mapper.Map<ResultReadDto>(entity);
+        // Return the found result as ResultReadDto or null if not found
+    }
 
-            return ToReadDto(entity);
-        }
+    // LIST result(s) by user
+    public async Task<IReadOnlyList<ResultReadDto>> ListByUserAsync(int userId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
+        if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
+        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be >= 1");
 
-        // READ single
-        public async Task<ResultReadDto?> GetByIdAsync(int resultId, CancellationToken ct = default)
-        {
-            if (resultId <= 0) throw new ArgumentException("Invalid result id", nameof(resultId));
+        var all = await _results.GetAllAsync(ct);
 
-            var entity = await _results.GetByIdAsync(resultId, ct);
-            return entity is null ? null : ToReadDto(entity);
-        }
+        return all
+            .Where(r => r.UserId == userId)
+            .OrderByDescending(r => r.CompletedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => _mapper.Map<ResultReadDto>(r)) // Mapping via AutoMapper
+            .ToList();
+    }
 
-        // LIST by user
-        public async Task<IReadOnlyList<ResultReadDto>> ListByUserAsync(
-            int userId,
-            int page = 1,
-            int pageSize = 20,
-            CancellationToken ct = default)
-        {
-            if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
-            if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
-            if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be >= 1");
+    // COUNT result(s) by user
+    public async Task<int> CountByUserAsync(int userId, CancellationToken ct = default)
+    {
+        if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
+        var all = await _results.GetAllAsync(ct);
+        return all.Count(r => r.UserId == userId);
+    }
 
-            var all = await _results.GetAllAsync(ct);
+    // LIST result(s) by quiz
+    public async Task<IReadOnlyList<ResultReadDto>> ListByQuizAsync(int quizId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    {
+        if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
+        if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
+        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be >= 1");
 
-            var items = all
-                .Where(r => r.UserId == userId)
-                .OrderByDescending(r => r.CompletedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(ToReadDto)
-                .ToList();
+        var all = await _results.GetAllAsync(ct);
 
-            return items;
-        }
+        return all
+            .Where(r => r.QuizId == quizId)
+            .OrderByDescending(r => r.CompletedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(r => _mapper.Map<ResultReadDto>(r)) // <-- mapping via AutoMapper
+            .ToList();
+    }
 
-        public async Task<int> CountByUserAsync(int userId, CancellationToken ct = default)
-        {
-            if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
+    // COUNT result(s) by quiz
+    public async Task<int> CountByQuizAsync(int quizId, CancellationToken ct = default)
+    {
+        if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
+        var all = await _results.GetAllAsync(ct);
+        return all.Count(r => r.QuizId == quizId);
+    }
 
-            var all = await _results.GetAllAsync(ct);
-            return all.Count(r => r.UserId == userId);
-        }
+    // DELETE, if needed
+    public async Task<bool> DeleteAsync(int resultId, CancellationToken ct = default)
+    {
+        if (resultId <= 0) throw new ArgumentException("Invalid result id", nameof(resultId));
 
-        // LIST by quiz
-        public async Task<IReadOnlyList<ResultReadDto>> ListByQuizAsync(
-            int quizId,
-            int page = 1,
-            int pageSize = 20,
-            CancellationToken ct = default)
-        {
-            if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
-            if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
-            if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be >= 1");
+        var entity = await _results.GetByIdAsync(resultId, ct);
+        if (entity is null) return false;
 
-            var all = await _results.GetAllAsync(ct);
+        _results.Remove(entity);
+        await _uow.SaveChangesAsync(ct);
 
-            var items = all
-                .Where(r => r.QuizId == quizId)
-                .OrderByDescending(r => r.CompletedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(ToReadDto)
-                .ToList();
+        _logger.LogInformation("Deleted result {ResultId}", resultId);
+        return true;
+    }
 
-            return items;
-        }
-
-        public async Task<int> CountByQuizAsync(int quizId, CancellationToken ct = default)
-        {
-            if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
-
-            var all = await _results.GetAllAsync(ct);
-            return all.Count(r => r.QuizId == quizId);
-        }
-
-        // DELETE
-        public async Task<bool> DeleteAsync(int resultId, CancellationToken ct = default)
-        {
-            if (resultId <= 0) throw new ArgumentException("Invalid result id", nameof(resultId));
-
-            var entity = await _results.GetByIdAsync(resultId, ct);
-            if (entity is null) return false;
-
-            _results.Remove(entity);
-            await _uow.SaveChangesAsync(ct);
-
-            _logger.LogInformation("Deleted result {ResultId}", resultId);
-            return true;
-        }
-
-        // --- Helpers ---
-
-        private static void ValidateCreate(ResultCreateDto dto)
-        {
-            if (dto is null) throw new ArgumentNullException(nameof(dto));
-            if (dto.UserId <= 0) throw new ArgumentException("UserId must be > 0", nameof(dto.UserId));
-            if (dto.QuizId <= 0) throw new ArgumentException("QuizId must be > 0", nameof(dto.QuizId));
-            if (dto.Score < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.Score));
-        }
-
-        private static ResultReadDto ToReadDto(Result r)
-            => new ResultReadDto(r.ResultId, r.UserId, r.QuizId, r.CorrectCount, r.CompletedAt);
+    // Validation for creating a result
+    private static void ValidateCreate(ResultCreateDto dto)
+    {
+        if (dto is null) throw new ArgumentNullException(nameof(dto));
+        if (dto.UserId <= 0) throw new ArgumentException("UserId must be > 0", nameof(dto.UserId));
+        if (dto.QuizId <= 0) throw new ArgumentException("QuizId must be > 0", nameof(dto.QuizId));
+        if (dto.Score < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.Score));
     }
 }

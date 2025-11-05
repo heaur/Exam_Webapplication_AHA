@@ -48,7 +48,11 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IResultService, ResultService>(); */
 
-builder.Services.AddScoped<IOptionService, OptionService>(); // Ferdig
+builder.Services.AddScoped<IOptionService, OptionService>(); // DONE
+
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(QuizApi.Application.Mapping.MappingProfile));
+
 
 // CORS (frontend on Vite)
 builder.Services.AddCors(options =>
