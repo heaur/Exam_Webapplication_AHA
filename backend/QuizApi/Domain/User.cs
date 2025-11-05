@@ -21,5 +21,10 @@ namespace QuizApi.Domain
 
         //Lists all quiz results taken by the user
         public List<Result> History { get; set; } = new();
+
+        // Timestamp for when the user was created
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     }
 }

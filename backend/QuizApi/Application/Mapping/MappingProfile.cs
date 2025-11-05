@@ -13,9 +13,10 @@ namespace QuizApi.Application.Mapping
             CreateMap<Quiz, QuizReadDto>()
                 .ForMember(d => d.Id,            o => o.MapFrom(s => s.QuizId))
                 .ForMember(d => d.QuestionCount, o => o.MapFrom(s => s.Questions == null ? (int?)null : s.Questions.Count));
-            CreateMap<QuizCreateDto, Quiz>();   // Title, Description matches
-            CreateMap<QuizUpdateDto, Quiz>()    // oppdaterer Title/Description/IsPublished hvis du bruker Map ved update
+            CreateMap<QuizCreateDto, Quiz>();   
+            CreateMap<QuizUpdateDto, Quiz>()    
                 .ForAllMembers(o => o.Condition((src, dest, srcMember) => srcMember != null));
+
 
             // QUESTION
             CreateMap<Question, QuestionReadDto>()
@@ -27,7 +28,7 @@ namespace QuizApi.Application.Mapping
 
             // OPTION 
             CreateMap<Option, OptionReadDto>()
-                .ForMember(d => d.Id, o => o.MapFrom(s => s.OptionID));  // merk: OptionID i domenet
+                .ForMember(d => d.Id, o => o.MapFrom(s => s.OptionID));
             CreateMap<OptionCreateDto, Option>();   // Text, IsCorrect, QuestionId
             CreateMap<OptionUpdateDto, Option>();   // Text, IsCorrect
 
@@ -37,12 +38,21 @@ namespace QuizApi.Application.Mapping
                 .ForMember(d => d.Score,   o => o.MapFrom(s => s.CorrectCount))
                 .ForMember(d => d.TakenAt, o => o.MapFrom(s => s.CompletedAt));
 
-            // Du kan mappe CreateDto -> Entity også (correctCount fra Score).
-            // TotalQuestions settes fortsatt best i service (du trenger quiz-spørsmålene).
+            // Mapping from ResultCreateDto to Result entity
             CreateMap<ResultCreateDto, Result>()
-                .ForMember(d => d.CorrectCount,   o => o.MapFrom(s => s.Score))
-                .ForMember(d => d.CompletedAt,    o => o.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(d => d.TotalQuestions, o => o.Ignore()); // settes i service
+                .ForMember(d => d.CorrectCount, o => o.MapFrom(s => s.Score))
+                .ForMember(d => d.CompletedAt, o => o.MapFrom(_ => DateTime.UtcNow))
+                .ForMember(d => d.TotalQuestions, o => o.Ignore()); 
+                
+            // USER
+            CreateMap<User, UserReadDto>()
+                .ForMember(d => d.Id, o => o.MapFrom(s => s.UserId)); 
+
+            CreateMap<UserCreateDto, User>()
+                .ForMember(d => d.CreatedAt, o => o.MapFrom(_ => DateTime.UtcNow));
+
+            CreateMap<UserUpdateDto, User>();
+
         }
     }
 }
