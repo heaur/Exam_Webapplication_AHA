@@ -1,90 +1,72 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
-using Serilog;
-using QuizApi.DAL;
-using QuizApi.DAL.Interfaces;
-using QuizApi.DAL.Repositories;
-using QuizApi.Application.Services;
-using QuizApi.Application.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using QuizApi.Areas.Identity.Data;
+using Serilog;
+using QuizApi.DAL;                    
+using QuizApi.Areas.Identity.Data;    
 
 var builder = WebApplication.CreateBuilder(args);
 
-// logging with Serilog
+// Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("Logs/log-.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
-
 builder.Logging.ClearProviders();
 builder.Logging.AddSerilog();
 
-// services
+// MVC/JSON
 builder.Services
     .AddControllers()
-    .AddJsonOptions(o =>
-        o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles); // avoid JSON cycles in dev
+    .AddJsonOptions(o => o.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// EF Core (SQLite)
+// EF Core: domain DB
 builder.Services.AddDbContext<QuizDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<AppDbContext>();
+// EF Core: Identity DB
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
+// Identity
 builder.Services
     .AddDefaultIdentity<IdentityUser>(options =>
     {
-        options.SignIn.RequireConfirmedAccount = false; // Can be true in Production
-        options.Password.RequireDigit = true; // Require at least one digit
-        options.Password.RequiredLength = 6; // Minimum length of password
+        options.SignIn.RequireConfirmedAccount = false; // True for production
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 6;
     })
     .AddEntityFrameworkStores<AppDbContext>();
 
-// DAL Repositories
-builder.Services.AddScoped<IQuizRepository, QuizRepository>();
-builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
-builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-
-// Application Services
-builder.Services.AddScoped<IQuizService, QuizService>();
-builder.Services.AddScoped<IQuestionService, QuestionService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IResultService, ResultService>();
-builder.Services.AddScoped<IOptionService, OptionService>();
-
-// AutoMapper
-builder.Services.AddAutoMapper(typeof(QuizApi.Application.Mapping.MappingProfile));
-
-
-// CORS (frontend on Vite)
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins("http://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
+
+// AutoMapper
+builder.Services.AddAutoMapper(typeof(QuizApi.Application.Mapping.MappingProfile));
 
 var app = builder.Build();
 
-// (Optional) Auto-create DB schema for MVP
+// EnsureCreated
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-    db.Database.EnsureCreated();
+    var quizDb = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
+    quizDb.Database.EnsureCreated();
+
+    var identityDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    identityDb.Database.EnsureCreated();
 }
 
-// pipeline
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -93,7 +75,20 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+
+app.UseAuthentication();  
 app.UseAuthorization();
+
 app.MapControllers();
+
+// Redirect "/" to Swagger in dev
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/", ctx =>
+    {
+        ctx.Response.Redirect("/swagger");
+        return Task.CompletedTask;
+    });
+}
 
 app.Run();
