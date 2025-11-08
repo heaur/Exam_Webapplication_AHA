@@ -7,6 +7,8 @@ using QuizApi.DAL.Repositories;
 using QuizApi.Application.Services;
 using QuizApi.Application.Interfaces;
 using QuizApi.DAL;
+using Microsoft.AspNetCore.Identity;
+using QuizApi.Areas.Identity.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +33,8 @@ builder.Services.AddSwaggerGen();
 // EF Core (SQLite)
 builder.Services.AddDbContext<QuizDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<AppDbContext>();
 
 // DAL Repositories
 builder.Services.AddScoped<IQuizRepository, QuizRepository>();

@@ -40,16 +40,16 @@ namespace QuizApi.Controllers
         }
 
         //Metoder for user:
-        // Lag bruker/create
-        // Logg inn/login
-        // Hent brukerinfo/getuser
+        // Lag bruker/create [AllowAnonymous]
+        // Logg inn/login 
+        // Hent brukerinfo/getuser [Authorize]
 
         //Metoder for quiz:
-        // Lag quiz/create
-        // Hent en quiz/getquiz
+        // Lag quiz/create [Authorize]
+        // Hent en quiz/getquiz [AllowAnonymous]
         // List opp alle quizzer/listquizzes
-        // Oppdater quiz/updatequiz
-        // Slett quiz/deletequiz
+        // Oppdater quiz/updatequiz [Authorize]
+        // Slett quiz/deletequiz [Authorize]
 
         //Metoder for questions:
         // Legg til spørsmål/addquestion
@@ -64,8 +64,8 @@ namespace QuizApi.Controllers
         // Slett svaralternativ/deleteoption
 
         // Metoder for Result:
-        // Start forsøk/startattempt
-        // Send inn svar/submitanswers
-        // Hent resultat/getresult
+        // Start forsøk/startattempt [Authorize]
+        // Send inn svar/submitanswers [Authorize]
+        // Hent resultat/getresult [Authorize]
     }
 }
