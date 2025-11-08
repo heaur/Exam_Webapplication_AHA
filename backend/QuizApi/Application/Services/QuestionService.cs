@@ -36,7 +36,7 @@ namespace QuizApi.Application.Services
 
             var entity = new Question
             {
-                QuizId = dto.QuizSetId,     
+                QuizId = dto.QuizId,     
                 Text   = dto.Text.Trim()
             };
 
@@ -131,7 +131,7 @@ namespace QuizApi.Application.Services
         {
             if (dto is null) throw new ArgumentNullException(nameof(dto));
             if (string.IsNullOrWhiteSpace(dto.Text)) throw new ArgumentException("Text is required", nameof(dto.Text));
-            if (dto.QuizSetId <= 0) throw new ArgumentException("QuizSetId must be > 0", nameof(dto.QuizSetId));
+            if (dto.QuizId <= 0) throw new ArgumentException("QuizSetId must be > 0", nameof(dto.QuizId));
         }
 
         // Validation for update

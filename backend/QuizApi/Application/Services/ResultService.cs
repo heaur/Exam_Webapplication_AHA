@@ -40,8 +40,8 @@ public class ResultService : IResultService
         {
             UserId         = dto.UserId,
             QuizId         = dto.QuizId,
-            CorrectCount   = dto.Score,
-            TotalQuestions = Math.Max(dto.Score, 1),
+            CorrectCount   = dto.CorrectCount,
+            TotalQuestions = Math.Max(dto.CorrectCount, 1),
             CompletedAt    = DateTime.UtcNow
         };
 
@@ -136,6 +136,6 @@ public class ResultService : IResultService
         if (dto is null) throw new ArgumentNullException(nameof(dto));
         if (dto.UserId <= 0) throw new ArgumentException("UserId must be > 0", nameof(dto.UserId));
         if (dto.QuizId <= 0) throw new ArgumentException("QuizId must be > 0", nameof(dto.QuizId));
-        if (dto.Score < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.Score));
+        if (dto.CorrectCount < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.CorrectCount));
     }
 }

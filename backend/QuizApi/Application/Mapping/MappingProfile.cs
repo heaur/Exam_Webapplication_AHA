@@ -20,40 +20,41 @@ namespace QuizApi.Application.Mapping
 
             // QUESTION
             CreateMap<Question, QuestionReadDto>()
-                .ForMember(d => d.Id,        o => o.MapFrom(s => s.QuestionId))
-                .ForMember(d => d.QuizSetId, o => o.MapFrom(s => s.QuizId));
+                .ForMember(d => d.QuestionId, o => o.MapFrom(s => s.QuestionId))
+                .ForMember(d => d.QuizId,     o => o.MapFrom(s => s.QuizId));
+
             CreateMap<QuestionCreateDto, Question>()
-                .ForMember(d => d.QuizId,    o => o.MapFrom(s => s.QuizSetId));
+                .ForMember(d => d.QuizId, o => o.MapFrom(s => s.QuizId));
             CreateMap<QuestionUpdateDto, Question>(); // Text
+
 
             // OPTION 
             CreateMap<Option, OptionReadDto>()
-                .ForMember(d => d.Id, o => o.MapFrom(s => s.OptionID));
+                .ForMember(d => d.OptionId, o => o.MapFrom(s => s.OptionID))
+                .ForMember(d => d.Text,     o => o.MapFrom(s => s.Text))
+                .ForMember(d => d.IsCorrect,o => o.MapFrom(s => s.IsCorrect))
+                .ForMember(d => d.QuestionId, o => o.MapFrom(s => s.QuestionId));
+
             CreateMap<OptionCreateDto, Option>();   // Text, IsCorrect, QuestionId
             CreateMap<OptionUpdateDto, Option>();   // Text, IsCorrect
 
+
             // RESULT
             CreateMap<Result, ResultReadDto>()
-                .ForMember(d => d.Id,      o => o.MapFrom(s => s.ResultId))
-                .ForMember(d => d.Score,   o => o.MapFrom(s => s.CorrectCount))
-                .ForMember(d => d.TakenAt, o => o.MapFrom(s => s.CompletedAt));
+                .ForMember(d => d.ResultId,       o => o.MapFrom(s => s.ResultId))
+                .ForMember(d => d.CorrectCount,   o => o.MapFrom(s => s.CorrectCount))
+                .ForMember(d => d.TotalQuestions, o => o.MapFrom(s => s.TotalQuestions))
+                .ForMember(d => d.CompletedAt,    o => o.MapFrom(s => s.CompletedAt))
+                .ForMember(d => d.Percentage,     o => o.MapFrom(s => s.Percentage))
+                ;
 
             // Mapping from ResultCreateDto to Result entity
             CreateMap<ResultCreateDto, Result>()
-                .ForMember(d => d.CorrectCount, o => o.MapFrom(s => s.Score))
-                .ForMember(d => d.CompletedAt, o => o.MapFrom(_ => DateTime.UtcNow))
-                .ForMember(d => d.TotalQuestions, o => o.Ignore()); 
-                
-            // USER
-            CreateMap<User, UserReadDto>()
-                .ForMember(d => d.Id, o => o.MapFrom(s => s.UserId)); 
-
-            CreateMap<UserCreateDto, User>()
-                .ForMember(d => d.CreatedAt, o => o.MapFrom(_ => DateTime.UtcNow));
-
-            CreateMap<UserUpdateDto, User>();
+                .ForMember(d => d.CorrectCount,   o => o.MapFrom(s => s.CorrectCount))
+                .ForMember(d => d.TotalQuestions, o => o.MapFrom(s => s.TotalQuestions))
+                .ForMember(d => d.CompletedAt,    o => o.MapFrom(_ => DateTime.UtcNow))
+                .ForMember(d => d.ResultId,       o => o.Ignore());
 
         }
     }
 }
-
