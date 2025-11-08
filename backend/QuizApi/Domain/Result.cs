@@ -19,12 +19,12 @@ namespace QuizApi.Domain
 
         // Number of correct answers
         [Required]
-        [Range(0, int.MaxValue, ErrorMessage = "Antall riktige kan ikke være negativt.")]
+        [Range(0, int.MaxValue, ErrorMessage = "Correct answers must be non-negative.")]
         public int CorrectCount { get; set; }
 
         // Total number of questions in the quiz
         [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Total spørsmål må være minst 1.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Total questions must be at least 1.")]
         public int TotalQuestions { get; set; }
 
         // Timestamp for when the quiz was completed

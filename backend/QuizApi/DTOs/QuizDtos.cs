@@ -1,11 +1,15 @@
-using System;
-
 namespace QuizApi.DTOs
 {
-
-    // DTOs for Quiz entity
-    // Create, Read, and Update operations
+    // Create Quiz DTO
     public record QuizCreateDto(string Title, string? Description);
-    public record QuizReadDto(int Id, string Title, string? Description, DateTime CreatedAt, DateTime? UpdatedAt = null, bool IsPublished = false, DateTime? PublishedAt = null, int? OwnerId = null, int? QuestionCount = null);
+
+    // Read DTO includes QuestionCount
+    public record QuizReadDto(
+        int Id, string Title, string? Description,
+        DateTime CreatedAt, DateTime? UpdatedAt,
+        bool IsPublished, DateTime? PublishedAt,
+        int? OwnerId, int? QuestionCount);
+    
+    // Update Quiz DTO
     public record QuizUpdateDto(string Title, string? Description, bool? IsPublished = null);
 }

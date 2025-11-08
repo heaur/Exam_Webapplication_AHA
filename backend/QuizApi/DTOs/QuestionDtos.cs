@@ -1,8 +1,11 @@
 namespace QuizApi.DTOs
 {
-    // DTOs for Question entity
-    // Create, Read, and Update operations
-    public record QuestionCreateDto(string Text, int QuizSetId);
-    public record QuestionReadDto(int Id, string Text, int QuizSetId);
+    // Create question DTO
+    public record QuestionCreateDto(string Text, int QuizId);
+
+    // Read question DTO
+    public record QuestionReadDto(int QuestionId, string Text, int QuizId);
+
+    // Update question DTO
     public record QuestionUpdateDto(string Text);
 }

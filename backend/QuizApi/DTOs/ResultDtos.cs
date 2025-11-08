@@ -1,7 +1,11 @@
 namespace QuizApi.DTOs
 {
-    // DTOs for Result entity
-    // Create and Read operations
-    public record ResultCreateDto(int UserId, int QuizId, int Score);
-    public record ResultReadDto(int Id, int UserId, int QuizId, int Score, DateTime TakenAt);
+    // Create result DTO
+    public record ResultCreateDto(int UserId, int QuizId, int CorrectCount, int TotalQuestions);
+
+    // Read result DTO with Percentage
+    public record ResultReadDto(
+        int ResultId, int UserId, int QuizId,
+        int CorrectCount, int TotalQuestions,
+        DateTime CompletedAt, double Percentage);
 }
