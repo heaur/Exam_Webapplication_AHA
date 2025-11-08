@@ -10,7 +10,6 @@ namespace QuizApi.DAL.Repositories
 
         public async Task<Quiz?> GetWithQuestionsAsync(int quizId, bool includeOptions = true, CancellationToken ct = default)
         {
-            // Merk: dine nøkkelnavn er QuizId / QuestionId / OptionID
             IQueryable<Quiz> q = _db.Quizzes
                 .Include(z => z.Questions)
                 .ThenInclude(q => q.Options);

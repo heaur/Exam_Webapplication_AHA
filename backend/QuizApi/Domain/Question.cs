@@ -5,21 +5,20 @@ namespace QuizApi.Domain
 {
     public class Question
     {
-        [Key]                                // PK
-        public int QuestionId { get; set; }
+        [Key]                      
+        public int QuestionId { get; set; } // PK
 
-        [Required]                           // Må høre til quiz
-        public int QuizId { get; set; }
+        [Required]                           
+        public int QuizId { get; set; } // FK
 
-        [Required]                           // tekst kan ikke være tom
-        [MaxLength(500)]                     // Maks 500 tegn
+        [Required]                           
+        [MaxLength(500)]                    
         public string Text { get; set; } = string.Empty; //Default value
 
-        public int? AnswerOptionID { get; set; }
+        public int? AnswerOptionID { get; set; } // FK to correct option
 
         public Quiz? Quiz { get; set; } //makes nullable
 
-        //Samling initialiserer for å unngå null referanser
-        public List<Option> Options { get; set; } = new(); //initialiserer en tom liste
+        public List<Option> Options { get; set; } = new(); // Initialize to empty list
     }
 }
