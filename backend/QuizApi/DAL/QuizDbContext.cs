@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using QuizApi.Domain;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace QuizApi.DAL
 {
-    public class QuizDbContext : IdentityDbContext
+    public class QuizDbContext : DbContext
     {
         public QuizDbContext(DbContextOptions<QuizDbContext> options) : base(options) { }
 
@@ -13,7 +12,6 @@ namespace QuizApi.DAL
         public DbSet<Question> Questions { get; set; } = default!;
         public DbSet<Option> Options { get; set; } = default!;
         public DbSet<Result> Results { get; set; } = default!;
-        public DbSet<User> Users { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
