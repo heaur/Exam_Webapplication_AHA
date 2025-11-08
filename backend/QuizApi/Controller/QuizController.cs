@@ -1,4 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using QuizApi.DTOs;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace QuizApi.Controllers
 {
@@ -13,6 +16,7 @@ namespace QuizApi.Controllers
         {
             _logger = logger;
         }
+
 
         [HttpGet]
         public IActionResult GetAll()
@@ -34,5 +38,34 @@ namespace QuizApi.Controllers
                 return StatusCode(500, "An unexpected error occurred.");
             }
         }
+
+        //Metoder for user:
+        // Lag bruker/create
+        // Logg inn/login
+        // Hent brukerinfo/getuser
+
+        //Metoder for quiz:
+        // Lag quiz/create
+        // Hent en quiz/getquiz
+        // List opp alle quizzer/listquizzes
+        // Oppdater quiz/updatequiz
+        // Slett quiz/deletequiz
+
+        //Metoder for questions:
+        // Legg til spørsmål/addquestion
+        // Hent spørsmål/getquestion
+        // Oppdater spørsmål/updatequestion
+        // Slett spørsmål/deletequestion
+
+        // Metoder for Options:
+        // Legg til svaralternativ/addoption
+        // Hent svaralternativ/getoption
+        // Oppdater svaralternativ/updateoption
+        // Slett svaralternativ/deleteoption
+
+        // Metoder for Result:
+        // Start forsøk/startattempt
+        // Send inn svar/submitanswers
+        // Hent resultat/getresult
     }
 }
