@@ -13,17 +13,20 @@ namespace QuizApi.Controllers
     [Route("api/[controller]")]
     public class OptionController : ControllerBase
     {
+        // CONTROLLER
         private readonly QuizDbContext _db;
 
+        // CONSTRUCTOR
         public OptionController(QuizDbContext db)
         {
             _db = db;
         }
 
 
-    // OPTIONS METHODS
+        // OPTIONS METHODS
 
-        // POST /api/quiz/{quizId}/questions/{questionId}/options  [Authorize]
+        // POST /api/quiz/{quizId}/questions/{questionId}/options [Authorize]
+        // Create/add option to question. User has to be logged in. 
         [HttpPost("{quizId:int}/questions/{questionId:int}/options")]
         [Authorize]
         public async Task<ActionResult<OptionReadDto>> AddOption(int quizId, int questionId, [FromBody] OptionCreateDto dto, CancellationToken ct)
@@ -49,9 +52,11 @@ namespace QuizApi.Controllers
 
             return CreatedAtAction(nameof(GetOption), new { quizId, questionId, optionId = o.OptionID },
                 new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
+            // Returns 201 Created with the created option
         }
 
-        // GET /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [AllowAnonymous]
+        // GET /api/quiz/{quizId}/questions/{questionId}/options/{optionId} [AllowAnonymous]
+        // Read/get option. User has to be logged in.
         [HttpGet("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [AllowAnonymous]
         public async Task<ActionResult<OptionReadDto>> GetOption(int quizId, int questionId, int optionId, CancellationToken ct)
@@ -61,9 +66,11 @@ namespace QuizApi.Controllers
 
             if (o is null) return NotFound();
             return Ok(new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
+            // Returns 200 OK with the option
         }
 
-        // PUT /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [Authorize]
+        // PUT /api/quiz/{quizId}/questions/{questionId}/options/{optionId} [Authorize]
+        // Method for updating option. User has to be logged in.
         [HttpPut("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [Authorize]
         public async Task<IActionResult> UpdateOption(int quizId, int questionId, int optionId, [FromBody] OptionUpdateDto dto, CancellationToken ct)
@@ -85,9 +92,11 @@ namespace QuizApi.Controllers
             o.IsCorrect = dto.IsCorrect;
             await _db.SaveChangesAsync(ct);
             return NoContent();
+            // Returns 204 No Content
         }
 
         // DELETE /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [Authorize]
+        // Method for deleting option. User has to be logged in.
         [HttpDelete("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [Authorize]
         public async Task<IActionResult> DeleteOption(int quizId, int questionId, int optionId, CancellationToken ct)

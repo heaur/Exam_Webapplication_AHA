@@ -1,8 +1,9 @@
 namespace QuizApi.DTOs
 {
-    // DTOs for User entity
-    // Create, Read, and Update operations
-    public record UserCreateDto(string Username, string Password);
-    public record UserReadDto(int Id, string Username, DateTime CreatedAt);
-    public record UserUpdateDto(string Username, string Password);
+    public record RegisterDto(string Username, string Password);
+    public record LoginDto(string Username, string Password, bool RememberMe = false);
+    public record CurrentUserDto(string Id, string UserName, string? Email);
+    public record UpdateUsernameDto(string NewUsername);
+    public record UpdatePasswordDto(string CurrentPassword, string NewPassword);
+    public record DeleteAccountDto(string CurrentPassword);
 }

@@ -11,10 +11,14 @@ namespace QuizApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+
+    // CONTROLLER
     public class ResultController : ControllerBase
     {
         private readonly ILogger<ResultController> _logger;
         private readonly QuizDbContext _db;
+
+        // CONSTRUCTOR
         public ResultController(QuizDbContext db, ILogger<ResultController> logger)
         {
             _db = db;
@@ -24,6 +28,7 @@ namespace QuizApi.Controllers
         // RESULTS METHODS
 
         // POST /api/quiz/{quizId}/results  [Authorize]
+        // Submit/add result. User has to be logged in.
         [HttpPost("{quizId:int}/results")]
         [Authorize]
         public async Task<ActionResult<ResultReadDto>> SubmitResult(int quizId, [FromBody] ResultCreateDto dto, CancellationToken ct)
@@ -70,9 +75,11 @@ namespace QuizApi.Controllers
                 result.Percentage);
 
             return CreatedAtAction(nameof(GetResult), new { quizId, resultId = result.ResultId }, read);
+            // Returns 201 Created with the created result
         }
 
         // GET /api/quiz/{quizId}/results/{resultId}  [Authorize]
+        // Read/get result. User has to be logged in.
         [HttpGet("{quizId:int}/results/{resultId:int}")]
         [Authorize]
         public async Task<ActionResult<ResultReadDto>> GetResult(int quizId, int resultId, CancellationToken ct)
@@ -88,6 +95,7 @@ namespace QuizApi.Controllers
                 r.CompletedAt, r.Percentage);
 
             return Ok(read);
+            // Returns 200 OK with the result
         }
     }
 }
