@@ -7,7 +7,7 @@ namespace QuizApi.DAL
     {
         public QuizDbContext(DbContextOptions<QuizDbContext> options) : base(options) { }
 
-        // DbSet-er (match dine modeller)
+        // DbSets for each entity
         public DbSet<Quiz> Quizzes { get; set; } = default!;
         public DbSet<Question> Questions { get; set; } = default!;
         public DbSet<Option> Options { get; set; } = default!;
@@ -16,7 +16,7 @@ namespace QuizApi.DAL
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // ---------- Quiz ----------
+            // Quiz
             modelBuilder.Entity<Quiz>(entity =>
             {
                 entity.HasKey(q => q.QuizId);
@@ -32,10 +32,10 @@ namespace QuizApi.DAL
                 entity.HasOne(q => q.Owner)
                       .WithMany(u => u.Creations)
                       .HasForeignKey(q => q.OwnerId)
-                      .OnDelete(DeleteBehavior.Restrict); // hindrer utilsiktet sletting av bruker
+                      .OnDelete(DeleteBehavior.Restrict); 
             });
 
-            // ---------- Question ----------
+            // Question
             modelBuilder.Entity<Question>(entity =>
             {
                 entity.HasKey(q => q.QuestionId);
@@ -50,11 +50,10 @@ namespace QuizApi.DAL
                       .HasForeignKey(q => q.QuizId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                // Optional peker til riktig svar (ingen FK/navigasjon satt i modellen – lar stå som scalar)
-                // Hvis du senere ønsker FK til Option, kan du konfigurere det her.
+                
             });
 
-            // ---------- Option ----------
+            // Option
             modelBuilder.Entity<Option>(entity =>
             {
                 entity.HasKey(o => o.OptionID);
@@ -73,7 +72,7 @@ namespace QuizApi.DAL
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ---------- Result ----------
+            // Result
             modelBuilder.Entity<Result>(entity =>
             {
                 entity.HasKey(r => r.ResultId);
@@ -95,12 +94,12 @@ namespace QuizApi.DAL
 
                 // Result (many) -> (1) Quiz
                 entity.HasOne(r => r.Quiz)
-                      .WithMany() // ingen samling på Quiz for Result i din modell
+                      .WithMany() 
                       .HasForeignKey(r => r.QuizId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ---------- User ----------
+            // User
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(u => u.UserId);
