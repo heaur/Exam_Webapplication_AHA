@@ -1,12 +1,11 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-// using QuizApi.DAL;
+using QuizApi.DAL;
 using QuizApi.DAL.Interfaces;
 using QuizApi.DAL.Repositories;
 using QuizApi.Application.Services;
 using QuizApi.Application.Interfaces;
-using QuizApi.DAL;
 using Microsoft.AspNetCore.Identity;
 using QuizApi.Areas.Identity.Data;
 
@@ -35,6 +34,19 @@ builder.Services.AddDbContext<QuizDbContext>(opt =>
     opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<AppDbContext>();
+
+// Identity 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services
+    .AddDefaultIdentity<IdentityUser>(options =>
+    {
+        options.SignIn.RequireConfirmedAccount = false; // Can be true in Production
+        options.Password.RequireDigit = true; // Require at least one digit
+        options.Password.RequiredLength = 6; // Minimum length of password
+    })
+    .AddEntityFrameworkStores<AppDbContext>();
 
 // DAL Repositories
 builder.Services.AddScoped<IQuizRepository, QuizRepository>();
