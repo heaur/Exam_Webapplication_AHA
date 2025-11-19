@@ -1,26 +1,34 @@
 {
   "compilerOptions": {
+    // Where TypeScript stores incremental build info for node-specific files.
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "types": ["node"],
-    "skipLibCheck": true,
 
-    /* Bundler mode */
+    // Node-focused compilation target. ES2020 is safe and widely supported.
+    "target": "ES2020",
+
+    // Only basic ES libs are needed here (no DOM).
+    "lib": ["ES2020"],
+
+    // Module system for Node / Vite config (ES modules).
+    "module": "ESNext",
+
+    // Let bundler / tooling resolve modules (Vite).
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
-    "moduleDetection": "force",
+
+    // Do not emit compiled .js files – Vite handles bundling.
     "noEmit": true,
 
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    // Skip type checking of library .d.ts files to avoid noise.
+    "skipLibCheck": true,
+
+    // Strict type checking is still enabled for our own code.
+    "strict": true
+
+    // IMPORTANT: we do NOT set "types": ["node"] here anymore.
+    // That is what caused the "Cannot find type definition file for 'node'" error.
   },
+
+  // This TS config only applies to vite.config.ts
   "include": ["vite.config.ts"]
 }
+

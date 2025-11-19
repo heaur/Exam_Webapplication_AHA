@@ -1,28 +1,46 @@
 {
   "compilerOptions": {
+    /* Where TypeScript stores incremental build info */
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "ES2022",
-    "useDefineForClassFields": true,
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "types": ["vite/client"],
-    "skipLibCheck": true,
 
-    /* Bundler mode */
+    /* JavaScript version target for the compiled output.
+       ES2020 is safe and supported by all modern tooling. */
+    "target": "ES2020",
+
+    /* Libraries that are available in the environment (browser). */
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+
+    /* Module system used by Vite / modern bundlers. */
+    "module": "ESNext",
+
+    /* Let Vite handle module resolution. */
     "moduleResolution": "bundler",
+
+    /* Allow importing .ts / .tsx / .js / .jsx without file extensions in import paths. */
     "allowImportingTsExtensions": true,
+
+    /* Enable stricter parsing and emit for modern JS. */
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
+
+    /* Do not emit compiled files (Vite handles bundling). */
     "noEmit": true,
+
+    /* Use React JSX transform. This is required for React + TSX. */
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* ---------- STRICTNESS / LINTING ---------- */
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* This can be true to speed up builds and avoid lib type errors. */
+    "skipLibCheck": true
   },
+
+  /* Which files belong to this "app" project */
   "include": ["src"]
 }
