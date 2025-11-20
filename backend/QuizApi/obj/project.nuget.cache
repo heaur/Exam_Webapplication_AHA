@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "t7oN8yqlEEk=",
+  "dgSpecHash": "r+bgTWDi0p0=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
+  "projectFilePath": "/Users/alisaibisevic/Library/CloudStorage/OneDrive-OsloMet/ITPE3200-Eksamen/Exam_Webapplication_AHA/backend/QuizApi/QuizApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Hedda\\.nuget\\packages\\automapper\\12.0.1\\automapper.12.0.1.nupkg.sha512",
     "C:\\Users\\Hedda\\.nuget\\packages\\automapper.extensions.microsoft.dependencyinjection\\12.0.1\\automapper.extensions.microsoft.dependencyinjection.12.0.1.nupkg.sha512",

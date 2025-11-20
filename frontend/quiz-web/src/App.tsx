@@ -27,6 +27,11 @@ import RegisterPage from "./auth/RegisterPage";
 // import QuizTakePage from "./quiz/QuizTakePage";
 // import QuizResultPage from "./quiz/QuizResultPage";
 
+import QuizListPage from "./quiz/QuizListPage";
+import QuizCreatePage from "./quiz/QuizCreatePage";
+import QuizTakePage from "./quiz/QuizTakePage";
+import QuizEditPage from "./quiz/QuizEditPage";
+
 const App: React.FC = () => {
   return (
     // AuthProvider makes authentication state (user, token, login, logout, etc.)
@@ -77,6 +82,12 @@ const App: React.FC = () => {
                 Fallback route: "*" matches any URL that did not match above.
                 Used for 404 / Not Found page.
               */}
+              <Route path="/quizzes" element={<QuizListPage />} />
+              <Route path="/quizzes/create" element={<QuizCreatePage />} />
+              <Route path="/quizzes/:id/take" element={<QuizTakePage />} />
+              <Route path="/quizzes/:id/edit" element={<QuizEditPage />} />
+
+              
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
