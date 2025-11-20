@@ -30,7 +30,7 @@ builder.Services.AddDbContext<QuizDbContext>(opt =>
 
 // EF Core: Identity DB
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<AppDbContext>()
+    .AddEntityFrameworkStores<DbContext>()
     .AddDefaultTokenProviders();
 
 // Identity
