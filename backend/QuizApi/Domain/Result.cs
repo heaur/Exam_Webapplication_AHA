@@ -11,7 +11,7 @@ namespace QuizApi.Domain
 
 
         [Required]
-        public int UserId { get; set; }      // FK to User
+        public string UserId { get; set; } = string.Empty;      // FK to User (Identity key)
 
         [Required]
         public int QuizId { get; set; }      // FK to Quiz

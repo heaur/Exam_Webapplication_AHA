@@ -15,12 +15,12 @@ namespace QuizApi.Application.Interfaces
 
         // LIST by user
         Task<IReadOnlyList<ResultReadDto>> ListByUserAsync(
-            int userId,
+            string userId,
             int page = 1,
             int pageSize = 20,
             CancellationToken ct = default);
 
-        Task<int> CountByUserAsync(int userId, CancellationToken ct = default);
+        Task<int> CountByUserAsync(string userId, CancellationToken ct = default);
 
         // LIST by quiz
         Task<IReadOnlyList<ResultReadDto>> ListByQuizAsync(

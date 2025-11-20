@@ -64,9 +64,9 @@ public class ResultService : IResultService
     }
 
     // LIST result(s) by user
-    public async Task<IReadOnlyList<ResultReadDto>> ListByUserAsync(int userId, int page = 1, int pageSize = 20, CancellationToken ct = default)
+    public async Task<IReadOnlyList<ResultReadDto>> ListByUserAsync(string userId, int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
-        if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("Invalid user id", nameof(userId));
         if (page <= 0) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
         if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "PageSize must be >= 1");
 
@@ -82,9 +82,9 @@ public class ResultService : IResultService
     }
 
     // COUNT result(s) by user
-    public async Task<int> CountByUserAsync(int userId, CancellationToken ct = default)
+    public async Task<int> CountByUserAsync(string userId, CancellationToken ct = default)
     {
-        if (userId <= 0) throw new ArgumentException("Invalid user id", nameof(userId));
+        if (string.IsNullOrWhiteSpace(userId)) throw new ArgumentException("Invalid user id", nameof(userId));
         var all = await _results.GetAllAsync(ct);
         return all.Count(r => r.UserId == userId);
     }
@@ -134,7 +134,7 @@ public class ResultService : IResultService
     private static void ValidateCreate(ResultCreateDto dto)
     {
         if (dto is null) throw new ArgumentNullException(nameof(dto));
-        if (dto.UserId <= 0) throw new ArgumentException("UserId must be > 0", nameof(dto.UserId));
+        if (string.IsNullOrWhiteSpace(dto.UserId)) throw new ArgumentException("UserId must be provided", nameof(dto.UserId));
         if (dto.QuizId <= 0) throw new ArgumentException("QuizId must be > 0", nameof(dto.QuizId));
         if (dto.CorrectCount < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.CorrectCount));
     }

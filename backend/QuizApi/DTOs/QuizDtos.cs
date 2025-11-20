@@ -8,8 +8,8 @@ namespace QuizApi.DTOs
         int Id, string Title, string? Description,
         DateTime CreatedAt, DateTime? UpdatedAt,
         bool IsPublished, DateTime? PublishedAt,
-        int? OwnerId, int? QuestionCount);
-    
+        string? OwnerId, int QuestionCount);
+
     // Update Quiz DTO
     public record QuizUpdateDto(string Title, string? Description, bool? IsPublished = null);
 }

@@ -18,7 +18,7 @@ namespace QuizApi.Domain
         public string? Description { get; set; }
 
         // Owner of the quiz
-        public int? OwnerId { get; set; }   // FK to User
+        public string? OwnerId { get; set; }   // FK to User
         public ApplicationUser? Owner { get; set; }    
 
         // Timestamps

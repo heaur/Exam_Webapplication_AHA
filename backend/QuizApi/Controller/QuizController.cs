@@ -38,11 +38,8 @@ namespace QuizApi.Controllers
                 // Returns 400 Bad Request with validation errors if title is missing
             }
 
-            // If you store int user ids, try to read it from claims
-            int? ownerId = null;
-            // Get user id from claims
-            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (int.TryParse(ownerClaim, out var parsed)) ownerId = parsed;
+            // Read user id from claims as string and store it directly (Quiz.OwnerId is a string)
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             // Create new quiz entity
             var now = DateTime.UtcNow;
@@ -145,7 +142,7 @@ namespace QuizApi.Controllers
 
             // Owner check
             var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (int.TryParse(ownerClaim, out var uid) && quiz.OwnerId.HasValue && quiz.OwnerId != uid)
+            if (!string.IsNullOrEmpty(ownerClaim) && !string.IsNullOrEmpty(quiz.OwnerId) && quiz.OwnerId != ownerClaim)
                 return Forbid();
 
             if (!string.IsNullOrWhiteSpace(dto.Title))
@@ -182,9 +179,9 @@ namespace QuizApi.Controllers
             if (quiz is null) return NotFound();
 
             // Owner check
-            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (int.TryParse(ownerClaim, out var uid) && quiz.OwnerId.HasValue && quiz.OwnerId != uid)
-                return Forbid();
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier); // Dette er en string fra Identity
+            if (!string.IsNullOrEmpty(ownerClaim) && !string.IsNullOrEmpty(quiz.OwnerId) && quiz.OwnerId != ownerClaim)
+            return Forbid();
 
             _db.Quizzes.Remove(quiz);
             // Save changes

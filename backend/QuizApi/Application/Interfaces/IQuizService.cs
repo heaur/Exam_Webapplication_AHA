@@ -18,13 +18,13 @@ namespace QuizApi.Application.Interfaces
             int page = 1,
             int pageSize = 20,
             string? search = null,      // Search by title or description
-            int? ownerId = null,        // or other filter dimension
+            string? ownerId = null,        // or other filter dimension
             bool? isPublished = null,   // filter by publication status
             CancellationToken ct = default);
 
         Task<int> CountAsync(
             string? search = null,
-            int? ownerId = null,
+            string? ownerId = null,
             bool? isPublished = null,
             CancellationToken ct = default);
 

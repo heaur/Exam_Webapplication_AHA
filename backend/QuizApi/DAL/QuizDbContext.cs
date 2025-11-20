@@ -16,6 +16,7 @@ namespace QuizApi.DAL
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             // Quiz
             modelBuilder.Entity<Quiz>(entity =>
             {

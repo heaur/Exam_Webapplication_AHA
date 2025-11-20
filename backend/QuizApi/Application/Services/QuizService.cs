@@ -68,7 +68,7 @@ namespace QuizApi.Application.Services
             int page = 1,
             int pageSize = 20,
             string? search = null,
-            int? ownerId = null,
+            string? ownerId = null,
             bool? isPublished = null,
             CancellationToken ct = default)
         {
@@ -81,8 +81,8 @@ namespace QuizApi.Application.Services
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(q => q.Title != null && q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            if (ownerId is not null)
-                query = query.Where(q => q.OwnerId == ownerId);
+            if (!string.IsNullOrWhiteSpace(ownerId))
+                query = query.Where(q => q.OwnerId != null && q.OwnerId == ownerId);
 
             if (isPublished is not null)
                 query = query.Where(q => q.IsPublished == isPublished);
@@ -99,7 +99,7 @@ namespace QuizApi.Application.Services
 
         public async Task<int> CountAsync(
             string? search = null,
-            int? ownerId = null,
+            string? ownerId = null,
             bool? isPublished = null,
             CancellationToken ct = default)
         {
@@ -109,8 +109,8 @@ namespace QuizApi.Application.Services
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(q => q.Title != null && q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            if (ownerId is not null)
-                query = query.Where(q => q.OwnerId == ownerId);
+            if (!string.IsNullOrWhiteSpace(ownerId))
+                query = query.Where(q => q.OwnerId != null && q.OwnerId == ownerId);
 
             if (isPublished is not null)
                 query = query.Where(q => q.IsPublished == isPublished);
@@ -205,7 +205,7 @@ namespace QuizApi.Application.Services
         // --- Mapping helper ---
         private static QuizReadDto ToDto(Quiz q)
         {
-            int? questionCount = q.Questions is null ? null : q.Questions.Count;
+            int questionCount = q.Questions?.Count ?? 0;
 
             return new QuizReadDto(
                 q.QuizId,
