@@ -1,7 +1,7 @@
 namespace QuizApi.DTOs
 {
     // User registration DTO
-    public record RegisterDto(string Username, string Password);
+    public record RegisterDto(string Username, string Password, string? Email = null);
 
     // User login DTO
     public record LoginDto(string Username, string Password, bool RememberMe = false);

@@ -32,16 +32,6 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<QuizDbContext>()
     .AddDefaultTokenProviders();
 
-// Identity
-builder.Services
-    .AddDefaultIdentity<IdentityUser>(options =>
-    {
-        options.SignIn.RequireConfirmedAccount = false; // True for production
-        options.Password.RequireDigit = true;
-        options.Password.RequiredLength = 6;
-    })
-    .AddEntityFrameworkStores<DbContext>();
-
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -57,14 +47,11 @@ builder.Services.AddAutoMapper(typeof(QuizApi.Application.Mapping.MappingProfile
 
 var app = builder.Build();
 
-// EnsureCreated
+// Apply migrations at startup
 using (var scope = app.Services.CreateScope())
 {
     var quizDb = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
-    quizDb.Database.EnsureCreated();
-
-    var identityDb = scope.ServiceProvider.GetRequiredService<DbContext>();
-    identityDb.Database.EnsureCreated();
+    quizDb.Database.Migrate();
 }
 
 // Pipeline

@@ -16,13 +16,13 @@ namespace QuizApi.Controllers;
 public class UserController : ControllerBase
 {
     private readonly ILogger<UserController> _logger;
-    private readonly UserManager<IdentityUser> _userManager;
-    private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly SignInManager<ApplicationUser> _signInManager;
 
     // CONSTRUCTOR
     public UserController(
-        UserManager<IdentityUser> userManager,
-        SignInManager<IdentityUser> signInManager,
+        UserManager<ApplicationUser> userManager,
+        SignInManager<ApplicationUser> signInManager,
         ILogger<UserController> logger)
     {
         _userManager = userManager;
@@ -45,10 +45,13 @@ public class UserController : ControllerBase
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
         // Uses the same value for UserName 
-        var user = new IdentityUser
+        var user = new ApplicationUser
         {
             UserName = dto.Username.Trim(),
-            Email = dto.Username.Contains("@") ? dto.Username.Trim() : null
+            Email = string.IsNullOrWhiteSpace(dto.Email)
+                ? (dto.Username.Contains("@") ? dto.Username.Trim() : null)
+                : dto.Email.Trim(),
+            CreatedAt = DateTime.UtcNow
         };
 
         // Check if username is available
@@ -64,8 +67,14 @@ public class UserController : ControllerBase
         // Auto sign-in after registration
         await _signInManager.SignInAsync(user, isPersistent: false);
 
-        return CreatedAtAction(nameof(Me), null);
-        // Returns 201 Created pointing to GET /api/user/me
+        var response = new CurrentUserDto(
+            Id: user.Id,
+            UserName: user.UserName ?? "",
+            Email: user.Email
+        );
+
+        return CreatedAtAction(nameof(Me), null, response);
+        // Returns 201 Created with current user info
     }
 
     // POST /api/user/login
