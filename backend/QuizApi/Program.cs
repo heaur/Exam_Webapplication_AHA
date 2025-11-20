@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Serilog;
 using QuizApi.DAL;                    
-using QuizApi.Areas.Identity.Data; 
 using QuizApi.Domain;   
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,7 +40,7 @@ builder.Services
         options.Password.RequireDigit = true;
         options.Password.RequiredLength = 6;
     })
-    .AddEntityFrameworkStores<AppDbContext>();
+    .AddEntityFrameworkStores<DbContext>();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -64,7 +63,7 @@ using (var scope = app.Services.CreateScope())
     var quizDb = scope.ServiceProvider.GetRequiredService<QuizDbContext>();
     quizDb.Database.EnsureCreated();
 
-    var identityDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var identityDb = scope.ServiceProvider.GetRequiredService<DbContext>();
     identityDb.Database.EnsureCreated();
 }
 
