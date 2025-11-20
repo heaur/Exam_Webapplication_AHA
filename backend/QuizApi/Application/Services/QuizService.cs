@@ -43,7 +43,7 @@ namespace QuizApi.Application.Services
                 UpdatedAt   = null,
                 IsPublished = false,
                 PublishedAt = null,
-                // OwnerId   = null // sett hvis du har eier
+                // OwnerId   = null // set if you track an owner
             };
 
             await _quizzes.AddAsync(entity, ct);

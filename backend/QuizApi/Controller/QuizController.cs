@@ -179,7 +179,7 @@ namespace QuizApi.Controllers
             if (quiz is null) return NotFound();
 
             // Owner check
-            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier); // Dette er en string fra Identity
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier); // This is a string from Identity
             if (!string.IsNullOrEmpty(ownerClaim) && !string.IsNullOrEmpty(quiz.OwnerId) && quiz.OwnerId != ownerClaim)
             return Forbid();
 
