@@ -24,12 +24,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // EF Core: domain DB
-builder.Services.AddDbContext<QuizDbContext>(opt =>
-    opt.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<QuizDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // EF Core: Identity DB
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
-    .AddEntityFrameworkStores<DbContext>()
+    .AddEntityFrameworkStores<QuizDbContext>()
     .AddDefaultTokenProviders();
 
 // Identity
