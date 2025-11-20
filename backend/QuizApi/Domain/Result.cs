@@ -32,7 +32,7 @@ namespace QuizApi.Domain
         public DateTime CompletedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        public User? User { get; set; }
+        public ApplicationUser? User { get; set; }
         public Quiz? Quiz { get; set; }
 
         // Computed property for percentage score
