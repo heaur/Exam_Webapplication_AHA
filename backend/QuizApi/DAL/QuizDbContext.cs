@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace QuizApi.DAL
 {
-    public class QuizDbContext : IdentityDbContext
+    public class QuizDbContext : IdentityDbContext<ApplicationUser>
     {
         public QuizDbContext(DbContextOptions<QuizDbContext> options) : base(options) { }
 
@@ -99,22 +99,7 @@ namespace QuizApi.DAL
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // User
-            modelBuilder.Entity<User>(entity =>
-            {
-                entity.HasKey(u => u.UserId);
-
-                entity.Property(u => u.Username)
-                      .IsRequired()
-                      .HasMaxLength(25);
-
-                entity.Property(u => u.Password)
-                      .IsRequired()
-                      .HasMaxLength(255);
-            });
-
-            base.OnModelCreating(modelBuilder);
-        }
     }
+}
 }
 
