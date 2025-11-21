@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Astrid sin pc\\Documents\\høst2025\\Webapplikasjoner\\eksamen2\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj": {}
+    "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Astrid sin pc\\Documents\\høst2025\\Webapplikasjoner\\eksamen2\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj": {
+    "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Astrid sin pc\\Documents\\høst2025\\Webapplikasjoner\\eksamen2\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
+        "projectUniqueName": "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
         "projectName": "QuizApi",
-        "projectPath": "C:\\Users\\Astrid sin pc\\Documents\\høst2025\\Webapplikasjoner\\eksamen2\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
-        "packagesPath": "C:\\Users\\Astrid sin pc\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Astrid sin pc\\Documents\\høst2025\\Webapplikasjoner\\eksamen2\\Exam_Webapplication_AHA\\backend\\QuizApi\\obj\\",
+        "projectPath": "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\QuizApi.csproj",
+        "packagesPath": "C:\\Users\\Hedda\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Hedda\\OneDrive\\01 Anvendt data\\5. Semester\\ITPE3200\\Exam_Webapplication_AHA\\backend\\QuizApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Astrid sin pc\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\Hedda\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -123,7 +123,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.415/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.413/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
