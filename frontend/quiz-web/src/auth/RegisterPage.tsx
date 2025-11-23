@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./UseAuth";
 
 const RegisterPage: React.FC = () => {
   const { register } = useAuth();

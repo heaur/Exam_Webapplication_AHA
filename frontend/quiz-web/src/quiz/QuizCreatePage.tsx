@@ -11,7 +11,7 @@ import React, { useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { createQuiz } from "./QuizService";
 import type { Quiz } from "../types/quiz";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/UseAuth";
 import ErrorAlert from "../components/ErrorAlert";
 
 const QuizCreatePage: React.FC = () => {

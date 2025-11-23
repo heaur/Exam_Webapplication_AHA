@@ -8,7 +8,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
 import { getQuiz, updateQuiz } from "./QuizService";
 import type { Quiz } from "../types/quiz";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 

@@ -12,7 +12,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getQuizzes, deleteQuiz } from "./QuizService";
 import type { QuizSummary } from "../types/quiz";
-import { useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 import ConfirmDialog from "../components/ConfirmDialog";
