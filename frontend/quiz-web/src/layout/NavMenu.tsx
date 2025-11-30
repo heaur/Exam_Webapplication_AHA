@@ -1,56 +1,98 @@
-// layout/NavMenu.tsx
+// src/layout/NavMenu.tsx
 // ----------------------
-// This component renders the top navigation bar of the application.
-// It is displayed on all pages (because App.tsx renders it outside <Routes>).
+// Top navigation bar for the app.
+//
+// - Logo "Student Quiz" on the left (click -> home)
+// - Links on the right: "Home", "New quiz", "Login"/"Logout"
+// - Hides completely on quiz taking and result pages
 
 import React from "react";
-import { Link, NavLink } from "react-router-dom";
-import AuthSection from "../auth/AuthSection";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+// øverst
+import { useAuth } from "../auth/UseAuth";
 
 const NavMenu: React.FC = () => {
-  return (
-    // <header> + <nav> are semantic HTML elements for navigation.
-    <header className="nav-header">
-      <nav className="nav-container">
-        {/* Left side: application "logo" or title.
-            Clicking this navigates to the home page ("/"). */}
-        <div className="nav-left">
-          <Link to="/" className="nav-brand">
-            Quiz Web
-          </Link>
-        </div>
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-        {/* Right side: main navigation links + authentication section. */}
-        <div className="nav-right">
-          {/* 
-            NavLink is like Link but can automatically add an "active" CSS class
-            when the current URL matches the link's "to" property.
-          */}
-          <NavLink
+  const path = location.pathname;
+
+  // Hide navbar on quiz-taking and result pages
+  const hideNav =
+    path.startsWith("/quizzes/") &&
+    (path.endsWith("/take") || path.endsWith("/result"));
+
+  if (hideNav) {
+    return null;
+  }
+
+  function isActive(to: string): boolean {
+    return path === to;
+  }
+
+  function handleNewQuizClick() {
+    if (!user) {
+      navigate("/login");
+    } else {
+      navigate("/quizzes/create");
+    }
+  }
+
+  function handleLogoutClick() {
+    logout();
+    navigate("/");
+  }
+
+  return (
+    <header className="nav-header">
+      <div className="nav-container">
+        {/* Logo / brand on the left */}
+        <Link to="/" className="nav-brand">
+          Student Quiz
+        </Link>
+
+        {/* Links on the right */}
+        <nav className="nav-right">
+          <Link
             to="/"
-            end
-            className={({ isActive }) =>
-              "nav-link" + (isActive ? " nav-link-active" : "")
-            }
+            className={`nav-link ${isActive("/") ? "nav-link-active" : ""}`}
           >
             Home
-          </NavLink>
+          </Link>
 
-          {/* Placeholder for the quiz list route.
-              For now it will lead to 404 until we add QuizListPage. */}
-          <NavLink
-            to="/quizzes"
-            className={({ isActive }) =>
-              "nav-link" + (isActive ? " nav-link-active" : "")
-            }
+          <button
+            type="button"
+            className="nav-link"
+            onClick={handleNewQuizClick}
           >
-            Quizzes
-          </NavLink>
+            New quiz
+          </button>
 
-          {/* Authentication UI (Login/Register or Welcome + Logout). */}
-          <AuthSection />
-        </div>
-      </nav>
+          {!user && (
+            <Link
+              to="/login"
+              className={`nav-link ${
+                isActive("/login") || isActive("/register")
+                  ? "nav-link-active"
+                  : ""
+              }`}
+            >
+              Login
+            </Link>
+          )}
+
+          {user && (
+            <button
+              type="button"
+              className="nav-link"
+              onClick={handleLogoutClick}
+            >
+              Logout
+            </button>
+          )}
+        </nav>
+      </div>
     </header>
   );
 };

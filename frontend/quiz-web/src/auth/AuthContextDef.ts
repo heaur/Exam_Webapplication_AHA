@@ -1,7 +1,7 @@
-// auth/AuthContextDef.ts
-// ----------------------
-// Denne fila inneholder KUN context-definisjonen.
-// Ingen komponenter her -> Fast Refresh blir happy.
+// src/auth/AuthContextDef.ts
+// --------------------------
+// This file contains ONLY the React context definition.
+// No components or hooks here -> React Fast Refresh is happy.
 
 import { createContext } from "react";
 import type { LoginDto, RegisterDto } from "./types/auth";

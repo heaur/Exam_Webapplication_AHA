@@ -1,7 +1,6 @@
-// auth/types/auth.ts
-// -------------------
-// Defines the shapes of the objects used when a user logs in or registers
-// This ensures type safety across the entire frontend.
+// src/auth/types/auth.ts
+// ----------------------
+// Defines the shapes of the objects used when a user logs in or registers.
 
 export interface LoginDto {
   username: string;

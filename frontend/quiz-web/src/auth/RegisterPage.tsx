@@ -20,8 +20,8 @@ const RegisterPage: React.FC = () => {
     setError(null);
 
     try {
-      await register({ username, email, password });
-      navigate("/");
+      await register({ username, email, password }); // <- kaster ved feil
+      navigate("/");                                // <- kun hvis alt gikk bra
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || "Registration failed.");

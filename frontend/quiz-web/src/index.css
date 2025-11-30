@@ -2,7 +2,6 @@
 /* ----------- */
 /* Global styles for the entire application. 
    Vi holder dette ryddig og konsistent med én fargepalett. */
-
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
@@ -41,7 +40,7 @@ body,
   flex-direction: column;
 }
 
-/* Main content area: add some padding. */
+/* Main content area */
 .app-main {
   flex: 1;
   max-width: 960px;
@@ -55,12 +54,15 @@ body,
   background-color: #ffffff;
   color: var(--color-text);
   border-bottom: 1px solid var(--color-border-soft);
+  width: 100%;               /* header alltid full bredde */
 }
 
+/* Innholdet inni header – går også full bredde */
 .nav-container {
-  max-width: 960px;
-  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.75rem 1.5rem;
+
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -73,24 +75,32 @@ body,
   text-decoration: none;
 }
 
+/* Høyresiden med linker */
 .nav-right {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
+/* Brukes både på <Link> og <button> */
 .nav-link {
+  background: none;
+  border: none;
+  padding: 0;
+
   color: var(--color-secondary);
   text-decoration: none;
   font-size: 0.95rem;
+  cursor: pointer;
 }
 
 .nav-link:hover {
   color: var(--color-primary);
 }
 
-/* Active link (current page) */
+/* Aktiv side får underline */
 .nav-link-active {
   border-bottom: 2px solid var(--color-accent);
+  padding-bottom: 0.15rem;
 }
 
 /* ---------- PAGES / LAYOUT ---------- */
@@ -102,6 +112,15 @@ body,
   background-color: #f9fafb;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* Home skal ha hero + browse-boks, ikke ett stort kort rundt alt */
+.page-home {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
 }
 
 .page-quiz-list,
@@ -140,6 +159,129 @@ body,
 
 .home-info ul {
   padding-left: 1.25rem;
+}
+
+/* ---------- HOME PAGE (hero + browse) ---------- */
+
+.home-hero {
+  padding: 2rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(93, 138, 135, 0.12),
+    rgba(122, 143, 163, 0.18)
+  );
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  margin-bottom: 2rem;
+}
+
+.home-hero-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.home-hero-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: #4b5563;
+  max-width: 32rem;
+}
+
+.home-hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.home-info {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+/* Browse-seksjon på forsiden */
+.home-browse {
+  padding: 1.5rem 2rem 2rem;
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  background-color: #f9fafb;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.home-browse-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.home-browse-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.home-browse-search {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.home-browse-search input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-medium);
+  font-size: 0.9rem;
+}
+
+/* Kategorier (fagkoder/emner) på forsiden */
+.home-category {
+  margin-bottom: 1.5rem;
+}
+
+.home-category-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.home-category-title {
+  font-weight: 600;
+}
+
+.home-category-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.home-quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.home-quiz-card {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-border-soft);
+  background-color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.home-quiz-card-title {
+  font-weight: 500;
+}
+
+.home-quiz-card-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
 }
 
 /* ---------- BUTTONS ---------- */
@@ -194,7 +336,7 @@ body,
   background-color: #b91c1c;
 }
 
-/* ---------- Search / filter ---------- */
+/* ---------- Search / filter (quiz list page) ---------- */
 
 .quiz-search {
   display: flex;
@@ -210,7 +352,7 @@ body,
   font-size: 0.9rem;
 }
 
-/* ---------- Quiz table ---------- */
+/* ---------- Quiz table (egen /quizzes-side) ---------- */
 
 .quiz-table {
   width: 100%;
@@ -235,7 +377,7 @@ body,
   gap: 0.4rem;
 }
 
-/* ---------- Forms (create/edit) ---------- */
+/* ---------- Forms (create/edit/login) ---------- */
 
 .form {
   display: flex;
@@ -256,6 +398,8 @@ body,
 }
 
 .form-field input[type="text"],
+.form-field input[type="password"],
+.form-field input[type="email"],
 .form-field textarea {
   padding: 0.45rem 0.6rem;
   border-radius: 0.5rem;
@@ -356,24 +500,69 @@ body,
   gap: 0.5rem;
 }
 
-/* ---------- Quiz take page ---------- */
+/* ---------- Quiz take / result layout ---------- */
+
+/* Quiz-take og result skal ikke ha stor card rundt alt */
+.page-quiz-take,
+.page-quiz-result {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0 0 2rem;
+  background: none;
+  box-shadow: none;
+}
+
+/* Top bar med fagkode/tittel + X */
+.quiz-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem 2rem 0.75rem;
+}
+
+.quiz-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.quiz-subject {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.quiz-exit-btn {
+  border: none;
+  background: #ffffff;
+  border-radius: 999px;
+  width: 32px;
+  height: 32px;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+}
+
+.quiz-exit-btn:hover {
+  background-color: #f3f4f6;
+}
 
 .quiz-description {
-  margin-bottom: 1rem;
+  margin: 0 2rem 1rem;
   color: #4b5563;
 }
 
-.quiz-result {
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  background-color: #ecfdf5;
-  border: 1px solid #bbf7d0;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
-}
-
+/* Spørsmålskort på quiz-take */
 .quiz-question-card {
-  margin-top: 1rem;
+  margin: 0.75rem 2rem 0.75rem;
   padding: 1rem 1.25rem;
   background-color: #ffffff;
   border-radius: 0.75rem;
@@ -389,6 +578,12 @@ body,
   color: #6b7280;
 }
 
+.quiz-question-index {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
 .quiz-question-text {
   margin: 0.25rem 0 0.75rem 0;
   font-size: 1.05rem;
@@ -396,6 +591,16 @@ body,
   color: #111827;
 }
 
+.quiz-question-image {
+  margin-bottom: 0.75rem;
+}
+
+.quiz-question-image img {
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+/* Options list */
 .quiz-options-list {
   list-style: none;
   padding: 0;
@@ -439,13 +644,129 @@ body,
 .quiz-navigation {
   display: flex;
   justify-content: space-between;
-  margin-top: 0.5rem;
+  margin: 0.5rem 2rem 0;
   gap: 0.5rem;
 }
 
 .quiz-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.75rem;
+  margin: 0.75rem 2rem 0;
   flex-wrap: wrap;
 }
+
+/* ---------- RESULT SUMMARY ---------- */
+
+.quiz-result-summary {
+  margin: 0.75rem 2rem 1.25rem;
+  padding: 0.9rem 1.2rem;
+  border-radius: 0.75rem;
+  background-color: #ecfdf5;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.quiz-result-percent {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.quiz-result-counts {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+/* Result-kort per spørsmål (riktig/feil) */
+
+.quiz-result-question-card {
+  margin: 0.5rem 2rem 0.5rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-soft);
+  background-color: #ffffff;
+}
+
+.quiz-result-question-card.correct {
+  border-color: #16a34a;
+  background-color: #ecfdf5;
+}
+
+.quiz-result-question-card.incorrect {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+/* ---------- RESPONSIVE QUIZ LAYOUT ---------- */
+
+@media (max-width: 640px) {
+  .quiz-top-bar {
+    padding: 1.25rem 1.25rem 0.5rem;
+  }
+
+  .quiz-question-card,
+  .quiz-result-summary,
+  .quiz-result-question-card,
+  .quiz-actions,
+  .quiz-navigation,
+  .quiz-description {
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
+  }
+
+  .home-browse {
+    padding: 1.25rem 1.5rem 1.75rem;
+  }
+}
+
+/* ---------- GRID ---------- */
+.browse-subject-quizzes-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.quiz-card {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+  outline: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.quiz-card:focus-visible {
+  box-shadow: 0 0 0 2px #2563eb;
+}
+
+.quiz-card-image-wrapper {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.quiz-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.quiz-card-title {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+}
+
+.quiz-card-description {
+  margin: 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+

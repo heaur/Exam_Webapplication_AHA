@@ -1,143 +1,198 @@
-// auth/AuthService.ts
-// ---------------------
-// Dette er det eneste stedet i frontend som kommuniserer direkte
-// med backend sitt /api/User-endepunkt.
+// src/auth/AuthService.ts
+// ------------------------------------------------------
+// Handles ALL authentication-related HTTP requests.
+// Matches your ASP.NET backend routes under /api/User/*
 //
-// BACKEND I DITT PROSJEKT BRUKER COOKIE-BASERT AUTENTISERING (Identity)
-// ----------------------------------------------------------------------
-// Det betyr:
-//   - Backend setter en AUTH COOKIE ved login (ikke JWT).
-//   - Frontend MÅ sende `credentials: "include"` for at cookies skal følge med.
-//   - Backend returnerer 204 NoContent på login (ingen token).
-//   - Backend returnerer 201 Created + JSON på register.
+// This service is used by AuthContext.tsx to perform
+// login, registration, logout and session restoration.
 //
-// Dette er HELT annerledes enn JWT-strukturen du hadde opprinnelig.
-// Denne filen er fullstendig refaktorert for å matche korrekt identitetsflyt.
-//
+// NO "any", fully typed, ESLint compatible.
+// ------------------------------------------------------
 
-import type { LoginDto, RegisterDto } from "./types/auth";
-import { parseJsonSafe } from "../utils/parseJsonSafe";
+import type { LoginDto, RegisterDto, AuthTokenResponse } from "./types/auth";
+import type { User } from "./types/user";
 
-// Base URL fra .env (skal være "http://localhost:XXXX")
+// Base URL, ex: VITE_API_URL = "http://localhost:5154"
 const API_URL = import.meta.env.VITE_API_URL as string;
+const USER_BASE_URL = `${API_URL}/api/User`;
 
 /**
- * Henter en lesbar feilmelding fra ASP.NET Identity responses.
- *
- * ASP.NET kan returnere:
- *  - ProblemDetails (400, 401, 404...)
- *  - ValidationProblemDetails (400 med errors{...})
- *  - Tom respons (f.eks. 204)
- *
- * Denne funksjonen sørger for at vi ALDRI viser rå JSON i UI,
- * men alltid en ren tekstmelding.
+ * Returns standard JSON headers.
+ * We do NOT send Authorization header here — backend auth is cookie-based.
  */
-async function extractErrorMessage(response: Response): Promise<string> {
-  const json = await parseJsonSafe(response);
+function jsonHeaders(): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+  };
+}
 
-  // 1) Håndter ModelState Validation-feil
-  if (json && json.errors && typeof json.errors === "object") {
-    const errObj = json.errors as Record<string, unknown>;
-    const messages: string[] = [];
+/**
+ * Type guard to validate if an unknown response looks like
+ * { token: string }
+ */
+function isAuthTokenResponse(value: unknown): value is AuthTokenResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "token" in value &&
+    typeof (value as { token: unknown }).token === "string"
+  );
+}
 
-    for (const key of Object.keys(errObj)) {
-      const value = errObj[key];
-      if (Array.isArray(value)) {
-        messages.push(...(value as string[]));
+/* ------------------------------------------------------
+ *  LOGIN
+ *  POST /api/User/login
+ *  Returns a JWT token as either:
+ *     1) raw string
+ *     2) { token: "..." }
+ *
+ *  If backend uses ONLY cookies and returns no token,
+ *  we treat that as success and return an empty string.
+ * ----------------------------------------------------- */
+export async function loginUser(dto: LoginDto): Promise<string> {
+  const response = await fetch(`${USER_BASE_URL}/login`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify(dto),
+    credentials: "include", // send/receive auth cookies
+  });
+
+  // ---------- user friendly error handling ----------
+  if (!response.ok) {
+    let message = "Innlogging feilet.";
+
+    try {
+      const err = await response.json();
+
+      if (response.status === 401) {
+        // typisk “feil brukernavn/passord”
+        message = "Feil brukernavn eller passord.";
+      } else if (response.status === 400 && err?.errors) {
+        // model validation errors fra backend
+        message =
+          (Object.values(err.errors) as unknown[])
+            .flat()
+            .join(" ") || "Ugyldige innloggingsdata.";
+      } else if (err?.title) {
+        // ProblemDetails.title
+        message = err.title;
       }
+    } catch {
+      // hvis parsing feiler, bruk default message
     }
 
-    if (messages.length > 0) return messages.join(" ");
+    throw new Error(message);
   }
 
-  // 2) ProblemDetails-standarder (title, detail)
-  if (json?.detail) return json.detail as string;
-  if (json?.title) return json.title as string;
+  // ---------- success path ----------
+  const data: unknown = await response.json().catch(() => null);
 
-  // 3) Prøv tekst-body
-  const text = await response.text().catch(() => "");
-  if (text) return text;
+  // Case 1: backend returnerer ren string
+  if (typeof data === "string" && data.trim()) {
+    return data.trim();
+  }
 
-  // 4) Fallback
-  return `Request failed with status ${response.status}`;
+  // Case 2: backend returnerer { token: "..." }
+  if (isAuthTokenResponse(data) && data.token.trim()) {
+    return data.token.trim();
+  }
+
+  // Case 3: ingen token i body (cookie-basert auth)
+  // Login er likevel OK, så vi returnerer tom streng.
+  return "";
 }
 
-/**
- * LOGIN — Cookie-based identity
- * ------------------------------
- * Backend returnerer 204 NoContent ved suksess.
- * Cookies blir satt automatisk (hvis credentials: "include").
- *
- * Derfor:
- *   - Vi forventer IKKE JSON-body
- *   - Vi mottar IKKE en token
- *   - Vi må hente brukeren etterpå via /api/User/me
- */
-export async function loginUser(dto: LoginDto): Promise<void> {
-  const response = await fetch(`${API_URL}/api/User/login`, {
+
+/* ------------------------------------------------------
+ *  REGISTER
+ *  POST /api/User/register
+ *  Behaves like login, but ALSO tolerates no token in response.
+ * ----------------------------------------------------- */
+export async function registerUser(dto: RegisterDto): Promise<string> {
+  const response = await fetch(`${USER_BASE_URL}/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify(dto),
-    credentials: "include", // ⬅ NØDVENDIG for at cookie skal følge med
-  });
-
-  if (!response.ok) {
-    const msg = await extractErrorMessage(response);
-    throw new Error(msg || "Login failed");
-  }
-
-  // 204 = suksess (backend har satt cookie)
-}
-
-/**
- * REGISTER
- * --------
- * Backend returnerer:
- *   - 201 Created + JSON (CurrentUserDto)
- *   - 400 bad request (validation)
- * Vi bryr oss ikke om JSON her, bare om suksess.
- */
-export async function registerUser(dto: RegisterDto): Promise<void> {
-  const response = await fetch(`${API_URL}/api/User/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dto),
-    credentials: "include", // cookie kreves for auto-login etterpå
-  });
-
-  if (!response.ok) {
-    const msg = await extractErrorMessage(response);
-    throw new Error(msg || "Registration failed");
-  }
-}
-
-/**
- * LOGOUT
- * ------
- * Backend signerer brukeren ut via cookie.
- */
-export async function logoutUser(): Promise<void> {
-  const response = await fetch(`${API_URL}/api/User/logout`, {
-    method: "POST",
     credentials: "include",
   });
 
+  // --- Brukervennlig feilhåndtering ---
   if (!response.ok) {
-    const msg = await extractErrorMessage(response);
-    throw new Error(msg || "Logout failed");
+    let message = "Registrering feilet.";
+
+    try {
+      const err = await response.json();
+
+      // Typisk model validation-feil
+      if (response.status === 400 && err?.errors) {
+        message =
+          Object.values(err.errors).flat().join(" ") ||
+          "Ugyldige registreringsdata.";
+      } else if (err?.title) {
+        message = err.title;
+      }
+    } catch {
+      // ignorer parsing-feil, behold fallback-melding
+    }
+
+    throw new Error(message);
   }
+
+  // --- Suksess men ingen body (f.eks. 200/204 uten innhold) ---
+  // Vi forventer ikke nødvendigvis token her, så dette er OK.
+  const data: unknown = await response.json().catch(() => null);
+
+  // Backend kan evt. returnere et rent token som string
+  if (typeof data === "string") {
+    const trimmed = data.trim();
+    return trimmed;
+  }
+
+  // Eller et objekt { token: "..." }
+  if (isAuthTokenResponse(data)) {
+    const trimmed = data.token.trim();
+    return trimmed;
+  }
+
+  // Ingen token, men registreringen var vellykket -> returner tom streng
+  return "";
 }
 
-/**
- * ME — henter nåværende bruker fra cookie-basert sesjon.
- * Returnerer enten UserDto eller null.
- */
-export async function fetchMe() {
-  const response = await fetch(`${API_URL}/api/User/me`, {
+
+/* ------------------------------------------------------
+ *  GET CURRENT USER
+ *  GET /api/User/me
+ *  Returns decoded user info OR null.
+ * ----------------------------------------------------- */
+export async function getCurrentUser(): Promise<User | null> {
+  const response = await fetch(`${USER_BASE_URL}/me`, {
     method: "GET",
     credentials: "include",
   });
 
-  if (!response.ok) return null;
-  return await parseJsonSafe(response);
+  if (response.status === 401) {
+    return null; // Not logged in
+  }
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const data = (await response.json().catch(() => null)) as User | null;
+  return data;
+}
+
+/* ------------------------------------------------------
+ *  LOGOUT
+ *  POST /api/User/logout
+ * ----------------------------------------------------- */
+export async function logoutUser(): Promise<void> {
+  const response = await fetch(`${USER_BASE_URL}/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error("Logout failed.");
+  }
 }

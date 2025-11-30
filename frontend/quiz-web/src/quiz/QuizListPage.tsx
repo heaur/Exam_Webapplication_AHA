@@ -101,9 +101,11 @@ const QuizListPage: React.FC = () => {
    * Client-side filtering by quiz title (case-insensitive).
    * This satisfies the requirement for search/filtering in the frontend.
    */
-  const filtered = quizzes.filter((quiz) =>
-    quiz.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = quizzes.filter((quiz) => {
+    const title = quiz.title?.toLowerCase() ?? "";
+    const term = search.toLowerCase();
+    return title.includes(term);
+  });
 
   return (
     <section className="page page-quiz-list">

@@ -1,41 +1,38 @@
 // src/quiz/QuizService.ts
 // ------------------------
-// This file contains all HTTP requests related to quizzes.
-// It acts as the "API service layer" for the quiz domain.
-// Every component should import functions from here instead of calling fetch() directly.
+// Centralised service for all quiz-related HTTP calls.
+// Talks to the ASP.NET Core API (QuizController).
 
 import type { Quiz, QuizSummary } from "../types/quiz";
 
-// Read base URL from Vite environment variables.
-// Example: VITE_API_URL = "http://localhost:5154"
-const API_URL = import.meta.env.VITE_API_URL as string;
+// Base URL from Vite env. Fallback to localhost:5154 if missing.
+const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  "http://localhost:5154";
+
+// Controller name = "Quiz"  => base URL = /api/Quiz
+const QUIZ_BASE_URL = `${API_URL}/api/Quiz`;
 
 /**
- * Builds the headers for authenticated requests.
- * If the user is logged in, the Authorization header will include the JWT.
+ * Builds default headers.
+ * We *could* sende Authorization: Bearer <token> her,
+ * men i ditt oppsett brukes Identity-cookie, så det er ikke nødvendig.
  */
-function authHeaders(): HeadersInit {
-  const token = localStorage.getItem("token");
-
-  const headers: HeadersInit = {
+function jsonHeaders(): HeadersInit {
+  return {
     "Content-Type": "application/json",
   };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  return headers;
 }
 
 /**
- * GET /api/quizzes
- * Retrieves a list of quiz summaries (lightweight quiz objects).
+ * GET /api/Quiz
+ * Returns a list of quizzes (summary objects) from the backend.
  */
 export async function getQuizzes(): Promise<QuizSummary[]> {
-  const response = await fetch(`${API_URL}/api/quizzes`, {
+  const response = await fetch(QUIZ_BASE_URL, {
     method: "GET",
-    headers: authHeaders(),
+    headers: jsonHeaders(),
+    credentials: "include", // <--- VIKTIG
   });
 
   if (!response.ok) {
@@ -48,13 +45,14 @@ export async function getQuizzes(): Promise<QuizSummary[]> {
 }
 
 /**
- * GET /api/quizzes/{id}
- * Retrieves a full quiz, including all questions and answer options.
+ * GET /api/Quiz/{id}
+ * Loads one full quiz including questions and options.
  */
 export async function getQuiz(id: number): Promise<Quiz> {
-  const response = await fetch(`${API_URL}/api/quizzes/${id}`, {
+  const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
     method: "GET",
-    headers: authHeaders(),
+    headers: jsonHeaders(),
+    credentials: "include", // <--- VIKTIG
   });
 
   if (!response.ok) {
@@ -67,13 +65,14 @@ export async function getQuiz(id: number): Promise<Quiz> {
 }
 
 /**
- * POST /api/quizzes
- * Creates a new quiz (including its questions and answer options).
+ * POST /api/Quiz
+ * Creates a new quiz.
  */
 export async function createQuiz(quiz: Quiz): Promise<Quiz> {
-  const response = await fetch(`${API_URL}/api/quizzes`, {
+  const response = await fetch(QUIZ_BASE_URL, {
     method: "POST",
-    headers: authHeaders(),
+    headers: jsonHeaders(),
+    credentials: "include", // <--- VIKTIG
     body: JSON.stringify(quiz),
   });
 
@@ -87,13 +86,14 @@ export async function createQuiz(quiz: Quiz): Promise<Quiz> {
 }
 
 /**
- * PUT /api/quizzes/{id}
+ * PUT /api/Quiz/{id}
  * Updates an existing quiz.
  */
 export async function updateQuiz(id: number, quiz: Quiz): Promise<Quiz> {
-  const response = await fetch(`${API_URL}/api/quizzes/${id}`, {
+  const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
     method: "PUT",
-    headers: authHeaders(),
+    headers: jsonHeaders(),
+    credentials: "include", // <--- VIKTIG
     body: JSON.stringify(quiz),
   });
 
@@ -107,13 +107,14 @@ export async function updateQuiz(id: number, quiz: Quiz): Promise<Quiz> {
 }
 
 /**
- * DELETE /api/quizzes/{id}
- * Deletes the quiz from the system.
+ * DELETE /api/Quiz/{id}
+ * Deletes the quiz.
  */
 export async function deleteQuiz(id: number): Promise<void> {
-  const response = await fetch(`${API_URL}/api/quizzes/${id}`, {
+  const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
     method: "DELETE",
-    headers: authHeaders(),
+    headers: jsonHeaders(),
+    credentials: "include", // <--- VIKTIG
   });
 
   if (!response.ok) {

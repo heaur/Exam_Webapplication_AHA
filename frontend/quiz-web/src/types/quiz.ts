@@ -1,126 +1,56 @@
 // src/types/quiz.ts
 // ------------------
-// Defines TypeScript interfaces for quiz-related data structures.
-// These types should mirror your backend DTOs as closely as possible,
-// so that the frontend and backend "speak the same language".
+// Shared TypeScript types for quizzes used across the frontend.
+// These types should match the backend DTOs as closely as possible.
 
-/**
- * Represents a single answer option for a question.
- * Example: "Oslo", "Berlin", "Paris" etc.
- */
-export interface AnswerOption {
-  /**
-   * Optional numeric identifier for the answer option.
-   * This is usually created by the database.
-   * It can be undefined when you create a new quiz on the client.
-   */
+export interface QuizOption {
   id?: number;
-
-  /**
-   * The visible text of the answer option shown to the user.
-   */
   text: string;
-
-  /**
-   * Indicates whether this answer option is a correct answer.
-   * Some quizzes may allow multiple correct answers, others only one.
-   */
   isCorrect: boolean;
 }
 
-/**
- * Represents a single question in a quiz.
- */
-export interface Question {
-  /**
-   * Optional numeric identifier for the question.
-   * Created by the backend/database when the quiz is saved.
-   */
+export interface QuizQuestion {
   id?: number;
-
-  /**
-   * The text of the question shown to the user.
-   * Example: "What is the capital of Norway?"
-   */
   text: string;
-
-  /**
-   * Number of points given for a correct answer to this question.
-   * This allows you to weight some questions higher than others.
-   */
+  // Optional image per question (not required)
+  imageUrl?: string;
+  // Number of points this question is worth
   points: number;
-
-  /**
-   * All possible answer options for this question.
-   * At least one option should have isCorrect = true.
-   */
-  options: AnswerOption[];
+  options: QuizOption[];
 }
 
-/**
- * Represents a full quiz with all questions and answer options.
- */
 export interface Quiz {
-  /**
-   * Optional numeric identifier for the quiz.
-   * Set by the backend/database when the quiz is created.
-   */
+  // id is only present for existing quizzes (not when creating a new one)
   id?: number;
 
-  /**
-   * Short, descriptive title of the quiz.
-   * Example: "General Knowledge", "C# Basics", "Web Development Quiz".
-   */
+  // Course / subject code, e.g. "ITPE3200"
+  subjectCode: string;
+
+  // Human-readable title shown in lists and on the quiz page
   title: string;
 
-  /**
-   * Optional longer description of the quiz.
-   * Explains what the quiz is about or who it is for.
-   */
-  description?: string;
+  // Short description shown on the browse cards and quiz page
+  description: string;
 
-  /**
-   * Indicates whether the quiz is published/visible to users.
-   * false = draft, true = visible in quiz list for normal users.
-   */
+  // Cover image shown on the browse cards and quiz page
+  imageUrl: string;
+
+  // Whether the quiz is visible to others
   isPublished: boolean;
 
-  /**
-   * All questions that belong to this quiz.
-   * Can be an empty array while the quiz is being created.
-   */
-  questions: Question[];
+  // Full set of questions including options
+  questions: QuizQuestion[];
 }
 
-/**
- * A lighter version of a quiz used for list views and overview pages.
- * Does not include the full questions and answer options.
- */
+// Lightweight summary used on list / browse pages
 export interface QuizSummary {
-  /**
-   * Unique identifier of the quiz.
-   */
   id: number;
-
-  /**
-   * Title of the quiz.
-   */
+  subjectCode: string;
   title: string;
+  description: string;
+  imageUrl: string;
 
-  /**
-   * Number of questions in the quiz.
-   * This is typically calculated on the backend.
-   */
-  questionCount: number;
-
-  /**
-   * Total number of points for the quiz.
-   * Also typically calculated on the backend.
-   */
-  totalPoints: number;
-
-  /**
-   * Published state of the quiz.
-   */
-  isPublished: boolean;
+  // These can be sent from backend to show quick stats if you want
+  questionCount?: number;
+  totalPoints?: number;
 }

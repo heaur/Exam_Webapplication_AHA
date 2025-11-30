@@ -6,8 +6,7 @@
 // (Fast refresh krever at filer som eksporterer en komponent,
 // IKKE også eksporterer hooks.)
 
-// auth/useAuth.ts
-
+// src/auth/UseAuth.ts
 import { useContext } from "react";
 import { AuthContext } from "./AuthContextDef";
 

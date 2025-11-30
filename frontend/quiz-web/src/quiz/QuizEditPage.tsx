@@ -1,8 +1,21 @@
 // src/quiz/QuizEditPage.tsx
 // --------------------------
 // Page for editing an existing quiz.
-// Loads the quiz from the backend and lets an authenticated user
-// update basic metadata (title, description, isPublished).
+//
+// Responsibilities:
+// - Only authenticated users may access this page.
+// - Loads an existing quiz from the backend using its ID from the URL.
+// - Lets the user update basic metadata:
+//     * subjectCode (course code)
+//     * title
+//     * description
+//     * isPublished
+// - Sends the changes back to the backend via PUT /api/Quiz/{id}.
+//
+// NOTE:
+//   Editing questions is *not* implemented here. We only update quiz metadata
+//   and send an empty questions array on update. The backend is expected to
+//   keep the existing questions when questions = [].
 
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
@@ -13,26 +26,37 @@ import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 
 const QuizEditPage: React.FC = () => {
-  // All hooks MUST be at the top of the component, before any early returns.
+  // ------------------------
+  // Hooks (must be at the top)
+  // ------------------------
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
 
+  // ------------------------
   // Loading state for initial fetch
+  // ------------------------
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // Form fields
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  // ------------------------
+  // Form fields (quiz metadata)
+  // ------------------------
+  const [subjectCode, setSubjectCode] = useState(""); // course code, e.g. "DATA1700"
+  const [title, setTitle] = useState("");             // quiz title
+  const [description, setDescription] = useState(""); // optional description
   const [isPublished, setIsPublished] = useState(false);
 
+  // ------------------------
   // UI state for submitting updates
+  // ------------------------
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // ------------------------
   // Load quiz data when component mounts or id changes
+  // ------------------------
   useEffect(() => {
     async function load() {
       // If the route param is missing, we cannot load anything.
@@ -43,8 +67,13 @@ const QuizEditPage: React.FC = () => {
       }
 
       try {
+        setLoading(true);
+        setLoadError(null);
+
         const quiz = await getQuiz(Number(id));
 
+        // Populate form fields with data from the backend quiz
+        setSubjectCode(quiz.subjectCode ?? "");
         setTitle(quiz.title);
         setDescription(quiz.description ?? "");
         setIsPublished(quiz.isPublished);
@@ -62,13 +91,17 @@ const QuizEditPage: React.FC = () => {
     void load();
   }, [id]);
 
-  // After all hooks: early return based on auth
+  // ------------------------
+  // Auth guard (after hooks)
+  // ------------------------
   if (!user) {
-    // Not logged in -> send user to login page
+    // User is not authenticated -> redirect to login.
     return <Navigate to="/login" replace />;
   }
 
-  // Handle initial loading / error states
+  // ------------------------
+  // Initial loading / error states
+  // ------------------------
   if (loading) {
     return (
       <section className="page page-quiz-edit">
@@ -87,37 +120,50 @@ const QuizEditPage: React.FC = () => {
     );
   }
 
-  // Simple validation for the form
+  // ------------------------
+  // Simple form validation
+  // ------------------------
   function validate(): boolean {
+    if (!subjectCode.trim()) {
+      setFormError("Subject / course code is required.");
+      return false;
+    }
     if (!title.trim()) {
       setFormError("Title is required.");
       return false;
     }
+
     setFormError(null);
     return true;
   }
 
-  // Handle submit (PUT /api/quizzes/{id})
+  // ------------------------
+  // Handle submit (PUT /api/Quiz/{id})
+  // ------------------------
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     if (!validate()) return;
-    if (!id) return; // extra safety
+    if (!id) return; // Extra safety; should never happen if we got this far.
 
     setSaving(true);
     setApiError(null);
 
+    // Build a Quiz object that matches the Quiz interface exactly.
+    // We only update metadata; questions editing is not supported here,
+    // so we send an empty questions array and let the backend keep the old ones.
     const updatedQuiz: Quiz = {
       id: Number(id),
+      subjectCode: subjectCode.trim(),
       title: title.trim(),
       description: description.trim() || undefined,
       isPublished,
-      // Questions editing is not implemented yet, so we send an empty list for now.
       questions: [],
     };
 
     try {
       await updateQuiz(Number(id), updatedQuiz);
+      // After successful update, go back to the quiz list.
       navigate("/quizzes");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -130,14 +176,32 @@ const QuizEditPage: React.FC = () => {
     }
   }
 
+  // ------------------------
+  // Render
+  // ------------------------
   return (
     <section className="page page-quiz-edit">
       <h1 className="page-title">Edit Quiz</h1>
 
+      {/* Top-level form + API errors */}
       {formError && <ErrorAlert message={formError} />}
       {apiError && <ErrorAlert message={apiError} />}
 
       <form className="form" onSubmit={handleSubmit}>
+        {/* Subject / course code */}
+        <div className="form-field">
+          <label htmlFor="subjectCode">Subject / course code *</label>
+          <input
+            id="subjectCode"
+            type="text"
+            placeholder="e.g. DATA1700"
+            value={subjectCode}
+            disabled={saving}
+            onChange={(e) => setSubjectCode(e.target.value)}
+          />
+        </div>
+
+        {/* Quiz title */}
         <div className="form-field">
           <label htmlFor="title">Title *</label>
           <input
@@ -149,6 +213,7 @@ const QuizEditPage: React.FC = () => {
           />
         </div>
 
+        {/* Optional description */}
         <div className="form-field">
           <label htmlFor="description">Description</label>
           <textarea
@@ -160,6 +225,7 @@ const QuizEditPage: React.FC = () => {
           />
         </div>
 
+        {/* Published flag */}
         <div className="form-field checkbox-field">
           <label>
             <input
@@ -172,8 +238,13 @@ const QuizEditPage: React.FC = () => {
           </label>
         </div>
 
+        {/* Actions */}
         <div className="form-actions">
-          <button type="submit" className="btn btn-primary" disabled={saving}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={saving}
+          >
             {saving ? "Saving..." : "Save Changes"}
           </button>
 
