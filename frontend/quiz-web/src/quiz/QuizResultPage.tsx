@@ -57,11 +57,12 @@ const QuizResultPage: React.FC = () => {
 
   return (
     <section className="page page-quiz-result">
+      {/* Full-width top bar: course (left) – title (center) – X (right) */}
       <div className="quiz-top-bar">
-        <div className="quiz-header-info">
-          <p className="quiz-subject">{quiz.subjectCode}</p>
-          <h1 className="page-title">{quiz.title}</h1>
-        </div>
+        <p className="quiz-top-course">{quiz.subjectCode}</p>
+
+        <h1 className="quiz-top-title">{quiz.title}</h1>
+
         <button
           type="button"
           className="quiz-exit-btn"

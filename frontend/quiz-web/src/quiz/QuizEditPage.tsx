@@ -12,10 +12,7 @@
 //     * isPublished
 // - Sends the changes back to the backend via PUT /api/Quiz/{id}.
 //
-// NOTE:
-//   Editing questions is *not* implemented here. We only update quiz metadata
-//   and send an empty questions array on update. The backend is expected to
-//   keep the existing questions when questions = [].
+// Editing questions is not implemented here; we only update quiz metadata.
 
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Navigate } from "react-router-dom";
@@ -26,40 +23,29 @@ import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 
 const QuizEditPage: React.FC = () => {
-  // ------------------------
-  // Hooks (must be at the top)
-  // ------------------------
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // ------------------------
   // Loading state for initial fetch
-  // ------------------------
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // ------------------------
   // Form fields (quiz metadata)
-  // ------------------------
-  const [subjectCode, setSubjectCode] = useState(""); // course code, e.g. "DATA1700"
+  const [subjectCode, setSubjectCode] = useState(""); // course code
   const [title, setTitle] = useState("");             // quiz title
-  const [description, setDescription] = useState(""); // optional description
+  const [description, setDescription] = useState(""); // description (required on frontend)
+  const [imageUrl, setImageUrl] = useState("");       // cover image (kept from backend)
   const [isPublished, setIsPublished] = useState(false);
 
-  // ------------------------
   // UI state for submitting updates
-  // ------------------------
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // ------------------------
   // Load quiz data when component mounts or id changes
-  // ------------------------
   useEffect(() => {
     async function load() {
-      // If the route param is missing, we cannot load anything.
       if (!id) {
         setLoadError("Invalid quiz ID.");
         setLoading(false);
@@ -70,12 +56,13 @@ const QuizEditPage: React.FC = () => {
         setLoading(true);
         setLoadError(null);
 
-        const quiz = await getQuiz(Number(id));
+        const quiz: Quiz = await getQuiz(Number(id));
 
         // Populate form fields with data from the backend quiz
         setSubjectCode(quiz.subjectCode ?? "");
         setTitle(quiz.title);
         setDescription(quiz.description ?? "");
+        setImageUrl(quiz.imageUrl ?? "");
         setIsPublished(quiz.isPublished);
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -91,17 +78,12 @@ const QuizEditPage: React.FC = () => {
     void load();
   }, [id]);
 
-  // ------------------------
-  // Auth guard (after hooks)
-  // ------------------------
+  // Auth guard
   if (!user) {
-    // User is not authenticated -> redirect to login.
     return <Navigate to="/login" replace />;
   }
 
-  // ------------------------
   // Initial loading / error states
-  // ------------------------
   if (loading) {
     return (
       <section className="page page-quiz-edit">
@@ -120,9 +102,7 @@ const QuizEditPage: React.FC = () => {
     );
   }
 
-  // ------------------------
   // Simple form validation
-  // ------------------------
   function validate(): boolean {
     if (!subjectCode.trim()) {
       setFormError("Subject / course code is required.");
@@ -132,19 +112,21 @@ const QuizEditPage: React.FC = () => {
       setFormError("Title is required.");
       return false;
     }
+    if (!description.trim()) {
+      setFormError("Description is required.");
+      return false;
+    }
 
     setFormError(null);
     return true;
   }
 
-  // ------------------------
   // Handle submit (PUT /api/Quiz/{id})
-  // ------------------------
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
 
     if (!validate()) return;
-    if (!id) return; // Extra safety; should never happen if we got this far.
+    if (!id) return;
 
     setSaving(true);
     setApiError(null);
@@ -156,14 +138,14 @@ const QuizEditPage: React.FC = () => {
       id: Number(id),
       subjectCode: subjectCode.trim(),
       title: title.trim(),
-      description: description.trim() || undefined,
+      description: description.trim(),
+      imageUrl: imageUrl.trim(),
       isPublished,
       questions: [],
     };
 
     try {
       await updateQuiz(Number(id), updatedQuiz);
-      // After successful update, go back to the quiz list.
       navigate("/quizzes");
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -176,14 +158,10 @@ const QuizEditPage: React.FC = () => {
     }
   }
 
-  // ------------------------
-  // Render
-  // ------------------------
   return (
     <section className="page page-quiz-edit">
       <h1 className="page-title">Edit Quiz</h1>
 
-      {/* Top-level form + API errors */}
       {formError && <ErrorAlert message={formError} />}
       {apiError && <ErrorAlert message={apiError} />}
 
@@ -213,9 +191,9 @@ const QuizEditPage: React.FC = () => {
           />
         </div>
 
-        {/* Optional description */}
+        {/* Description */}
         <div className="form-field">
-          <label htmlFor="description">Description</label>
+          <label htmlFor="description">Description *</label>
           <textarea
             id="description"
             rows={3}

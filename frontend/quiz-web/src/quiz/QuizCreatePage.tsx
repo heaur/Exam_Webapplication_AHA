@@ -1,25 +1,6 @@
 // src/quiz/QuizCreatePage.tsx
 // ---------------------------
 // Page for creating a new quiz.
-// Frontend responsibilities of this page:
-// - Only authenticated users are allowed to access it.
-// - Provides a structured form for creating a quiz:
-//    * Subject / course code (required)
-//    * Quiz title (required)
-//    * Quiz cover image URL (required)
-//    * Description (required -> used on browse cards)
-//    * One or more "question cards"
-// - Each question card contains:
-//    * Question text (required)
-//    * Optional image URL
-//    * Exactly 4 answer options (all 4 are required)
-//    * One of the 4 options must be marked as correct
-// - The user can add more question cards dynamically.
-// - On save, the page builds a Quiz object that matches the backend DTO
-//   and sends it via the QuizService.
-// - There are two main actions:
-//    * "Create and take quiz": after creating, navigate directly to Take page
-//    * "Create": after creating, navigate back to the home page
 
 import React, { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -29,39 +10,24 @@ import type { Quiz } from "../types/quiz";
 import ErrorAlert from "../components/ErrorAlert";
 
 interface QuestionForm {
-  // Local id only used as a React key, not sent to backend.
-  id: number;
-  // Question text shown to the user.
-  text: string;
-  // Optional image URL (user can leave empty).
-  imageUrl: string;
-  // Text for the 4 answer options.
-  options: string[];
-  // Index of the correct option (0-3). null means "not selected yet".
-  correctIndex: number | null;
+  id: number;                // Local id only used as a React key
+  text: string;              // Question text shown to the user
+  imageUrl: string;          // Optional image URL (may be empty string)
+  options: string[];         // Text for the 4 answer options
+  correctIndex: number | null; // Index of the correct option (0-3)
 }
 
 const QuizCreatePage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // ------------------------
   // Quiz-level form state
-  // ------------------------
-
-  // Course / subject code, e.g. "ITPE3200".
   const [subjectCode, setSubjectCode] = useState("");
-  // Human-readable title for the quiz (displayed in lists etc.).
   const [title, setTitle] = useState("");
-  // Cover image for the quiz, shown on browse cards.
   const [coverImageUrl, setCoverImageUrl] = useState("");
-  // Description of what this quiz is about (also shown on browse cards).
   const [description, setDescription] = useState("");
 
-  // ------------------------
   // Question cards form state
-  // ------------------------
-
   const [questions, setQuestions] = useState<QuestionForm[]>([
     {
       id: 1,
@@ -72,22 +38,17 @@ const QuizCreatePage: React.FC = () => {
     },
   ]);
 
-  // ------------------------
   // UI state for request handling
-  // ------------------------
-
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
-  // Auth guard: only allow logged-in users here.
+  // Auth guard
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // ------------------------
   // Helper: add a new question card
-  // ------------------------
   function addQuestionCard() {
     setQuestions((prev) => [
       ...prev,
@@ -136,11 +97,8 @@ const QuizCreatePage: React.FC = () => {
     );
   }
 
-  // ------------------------
   // Client-side validation
-  // ------------------------
   function validate(): boolean {
-    // Trim to avoid accepting whitespace-only values.
     if (!subjectCode.trim()) {
       setFormError("Subject code / course code is required.");
       return false;
@@ -162,7 +120,6 @@ const QuizCreatePage: React.FC = () => {
       return false;
     }
 
-    // Validate each question card in order.
     for (const [index, q] of questions.entries()) {
       if (!q.text.trim()) {
         setFormError(`Question ${index + 1}: text is required.`);
@@ -184,9 +141,7 @@ const QuizCreatePage: React.FC = () => {
     return true;
   }
 
-  // ------------------------
   // Submit handler
-  // ------------------------
   async function handleSubmit(action: "create" | "createAndTake") {
     if (!validate()) return;
 
@@ -199,12 +154,10 @@ const QuizCreatePage: React.FC = () => {
       title: title.trim(),
       description: description.trim(),
       imageUrl: coverImageUrl.trim(),
-      // For now we mark quizzes as published immediately.
-      isPublished: true,
+      isPublished: true, // Mark quizzes as published immediately
       questions: questions.map((q) => ({
         text: q.text.trim(),
         imageUrl: q.imageUrl.trim() || undefined,
-        // For now each question is worth 1 point.
         points: 1,
         options: q.options.map((optText, idx) => ({
           text: optText.trim(),
@@ -233,9 +186,7 @@ const QuizCreatePage: React.FC = () => {
     }
   }
 
-  // ------------------------
   // Render
-  // ------------------------
   return (
     <section className="page page-quiz-create">
       <h1 className="page-title">Create a New Quiz</h1>
@@ -243,10 +194,7 @@ const QuizCreatePage: React.FC = () => {
       {formError && <ErrorAlert message={formError} />}
       {apiError && <ErrorAlert message={apiError} />}
 
-      <form
-        className="form"
-        onSubmit={(e) => e.preventDefault()}
-      >
+      <form className="form" onSubmit={(e) => e.preventDefault()}>
         {/* Subject / course code */}
         <div className="form-field">
           <label htmlFor="subjectCode">Subject / course code *</label>
@@ -339,10 +287,7 @@ const QuizCreatePage: React.FC = () => {
               <div className="form-field">
                 <p>Answer options (one must be correct)</p>
                 {q.options.map((opt, idx) => (
-                  <label
-                    key={idx}
-                    className="quiz-option-edit"
-                  >
+                  <label key={idx} className="quiz-option-edit">
                     <input
                       type="radio"
                       name={`correct-${q.id}`}

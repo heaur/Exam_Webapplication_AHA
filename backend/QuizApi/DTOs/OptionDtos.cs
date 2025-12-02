@@ -1,11 +1,11 @@
 namespace QuizApi.DTOs
 {
-    // Create option DTO
+    // DTO used when creating an answer option for a question.
     public record OptionCreateDto(string Text, bool IsCorrect, int QuestionId);
 
-    // Read option DTO
+    // DTO returned when reading options.
     public record OptionReadDto(int OptionId, string Text, bool IsCorrect, int QuestionId);
 
-    // Update option DTO
+    // DTO used when updating an option.
     public record OptionUpdateDto(string Text, bool IsCorrect);
 }

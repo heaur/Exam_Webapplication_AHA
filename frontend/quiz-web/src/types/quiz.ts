@@ -1,56 +1,52 @@
 // src/types/quiz.ts
 // ------------------
-// Shared TypeScript types for quizzes used across the frontend.
-// These types should match the backend DTOs as closely as possible.
+// Shared TypeScript types for quiz data used across the frontend.
 
-export interface QuizOption {
-  id?: number;
-  text: string;
-  isCorrect: boolean;
-}
-
-export interface QuizQuestion {
-  id?: number;
-  text: string;
-  // Optional image per question (not required)
-  imageUrl?: string;
-  // Number of points this question is worth
-  points: number;
-  options: QuizOption[];
-}
-
-export interface Quiz {
-  // id is only present for existing quizzes (not when creating a new one)
-  id?: number;
-
-  // Course / subject code, e.g. "ITPE3200"
-  subjectCode: string;
-
-  // Human-readable title shown in lists and on the quiz page
-  title: string;
-
-  // Short description shown on the browse cards and quiz page
-  description: string;
-
-  // Cover image shown on the browse cards and quiz page
-  imageUrl: string;
-
-  // Whether the quiz is visible to others
-  isPublished: boolean;
-
-  // Full set of questions including options
-  questions: QuizQuestion[];
-}
-
-// Lightweight summary used on list / browse pages
-export interface QuizSummary {
+// Short quiz info used in lists/tables and on the homepage.
+export type QuizSummary = {
   id: number;
-  subjectCode: string;
-  title: string;
-  description: string;
-  imageUrl: string;
+  subjectCode: string;      // Course code, e.g. "ITPE3200"
+  title: string;            // Quiz title
+  description: string;      // Required description on frontend
+  imageUrl: string;         // Required cover image URL on frontend
+  questionCount: number;    // Number of questions in the quiz
+  totalPoints?: number;     // Optional total score if you calculate it
+  isPublished: boolean;     // Whether the quiz is visible to users
+};
 
-  // These can be sent from backend to show quick stats if you want
-  questionCount?: number;
-  totalPoints?: number;
-}
+// Single answer option for a question
+export type Option = {
+  id?: number | null;       // Optional: exists only for persisted options
+  text: string;             // Display text for this option
+  isCorrect: boolean;       // True if this is the correct answer
+};
+
+// Question with its options
+export type Question = {
+  id?: number | null;       // Optional: exists only for persisted questions
+  quizId?: number;          // FK to quiz if needed
+  text: string;             // Question text
+  imageUrl?: string;        // Optional image URL per question
+  points: number;           // Points awarded for this question
+  options: Option[];        // Answer options for this question
+};
+
+// Full quiz type used when creating, editing and taking a quiz
+export type Quiz = {
+  id?: number;              // Optional when creating a new quiz
+  subjectCode: string;      // Course code, required on frontend
+  title: string;            // Quiz title, required
+  description: string;      // Required description
+  imageUrl: string;         // Required cover image URL
+  isPublished: boolean;     // Publication flag
+
+  createdAt?: string;       // ISO timestamp from backend
+  updatedAt?: string | null;
+  publishedAt?: string | null;
+  ownerId?: string | null;
+
+  questionCount?: number;   // Optional aggregate
+  totalPoints?: number;     // Optional aggregate
+
+  questions: Question[];    // Full list of questions for this quiz
+};

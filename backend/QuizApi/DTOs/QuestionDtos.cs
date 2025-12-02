@@ -1,11 +1,11 @@
 namespace QuizApi.DTOs
 {
-    // Create question DTO
+    // DTO used when creating a new question under a quiz.
     public record QuestionCreateDto(string Text, int QuizId);
 
-    // Read question DTO
+    // DTO returned when reading questions.
     public record QuestionReadDto(int QuestionId, string Text, int QuizId);
 
-    // Update question DTO
+    // DTO used when updating an existing question.
     public record QuestionUpdateDto(string Text);
 }

@@ -1,21 +1,26 @@
-/* index.css */
-/* ----------- */
-/* Global styles for the entire application. 
-   Vi holder dette ryddig og konsistent med én fargepalett. */
+/* index.css
+   ==========
+   Global styling + layout + komponenter for hele appen
+*/
+
+/* =========================
+   1. GLOBALT / ROOT
+   ========================= */
+
 :root {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  /* Fargevariabler */
-  --color-text: #3E4750;            /* mørk grå tekst */
-  --color-bg: #DCE6E0;              /* lys mint-sand bakgrunn */
+  /* Farger */
+  --color-text: #3E4750;          /* mørk grå tekst */
+  --color-bg: #DCE6E0;            /* lys mint-sand bakgrunn */
 
-  --color-primary: #5D8A87;         /* dus petrol */
-  --color-primary-dark: #4A6F6C;    /* mørkere petrol (hover) */
+  --color-primary: #5D8A87;       /* dus petrol */
+  --color-primary-dark: #4A6F6C;  /* mørkere petrol (hover) */
 
-  --color-secondary: #7A8FA3;       /* blågrå */
-  --color-accent: #cc5151;          /* copper aksent */
+  --color-secondary: #7A8FA3;     /* blågrå */
+  --color-accent: #cc5151;        /* copper aksent */
 
   --color-border-soft: #e5e7eb;
   --color-border-medium: #d1d5db;
@@ -24,7 +29,7 @@
   background-color: var(--color-bg);
 }
 
-/* Make sure the page uses the full viewport height. */
+/* Full høyde på hele appen */
 html,
 body,
 #root {
@@ -33,14 +38,13 @@ body,
   height: 100%;
 }
 
-/* Basic app layout container */
+/* Hoved-layout */
 .app-root {
   min-height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-/* Main content area */
 .app-main {
   flex: 1;
   max-width: 960px;
@@ -48,21 +52,22 @@ body,
   padding: 1.5rem;
 }
 
-/* ---------- NAVIGATION ---------- */
+/* =========================
+   2. NAVIGASJON
+   ========================= */
 
 .nav-header {
   background-color: #ffffff;
   color: var(--color-text);
   border-bottom: 1px solid var(--color-border-soft);
-  width: 100%;               /* header alltid full bredde */
+  width: 100%;
 }
 
-/* Innholdet inni header – går også full bredde */
+/* Innhold inni header */
 .nav-container {
   width: 100%;
   box-sizing: border-box;
   padding: 0.75rem 1.5rem;
-
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -75,18 +80,16 @@ body,
   text-decoration: none;
 }
 
-/* Høyresiden med linker */
 .nav-right {
   display: flex;
   gap: 1.5rem;
 }
 
-/* Brukes både på <Link> og <button> */
+/* Linker / knapper til høyre i navbar */
 .nav-link {
   background: none;
   border: none;
   padding: 0;
-
   color: var(--color-secondary);
   text-decoration: none;
   font-size: 0.95rem;
@@ -97,13 +100,15 @@ body,
   color: var(--color-primary);
 }
 
-/* Aktiv side får underline */
+/* Aktiv side */
 .nav-link-active {
   border-bottom: 2px solid var(--color-accent);
   padding-bottom: 0.15rem;
 }
 
-/* ---------- PAGES / LAYOUT ---------- */
+/* =========================
+   3. PAGES / GENERELL LAYOUT
+   ========================= */
 
 .page {
   max-width: 960px;
@@ -114,7 +119,7 @@ body,
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
 }
 
-/* Home skal ha hero + browse-boks, ikke ett stort kort rundt alt */
+/* Home har egen layout (hero + browse) */
 .page-home {
   max-width: 960px;
   margin: 2rem auto;
@@ -123,11 +128,12 @@ body,
   box-shadow: none;
 }
 
+/* Egen page-type for quiz-sider – arver i praksis .page-styling */
 .page-quiz-list,
 .page-quiz-create,
 .page-quiz-edit,
 .page-quiz-take {
-  /* reuse .page styles */
+  /* bruker .page som base */
 }
 
 .page-title {
@@ -149,7 +155,7 @@ body,
   color: #4b5563;
 }
 
-/* Layout for action sections on Home and NotFound pages */
+/* Handlings-linje på Home / NotFound */
 .home-actions,
 .not-found-actions {
   display: flex;
@@ -161,7 +167,9 @@ body,
   padding-left: 1.25rem;
 }
 
-/* ---------- HOME PAGE (hero + browse) ---------- */
+/* =========================
+   4. HOME (HERO + BROWSE)
+   ========================= */
 
 .home-hero {
   padding: 2rem;
@@ -200,7 +208,7 @@ body,
   color: #4b5563;
 }
 
-/* Browse-seksjon på forsiden */
+/* Browse-seksjon */
 .home-browse {
   padding: 1.5rem 2rem 2rem;
   margin-top: 1.5rem;
@@ -221,6 +229,7 @@ body,
   font-weight: 600;
 }
 
+/* Søkefelt på forsiden */
 .home-browse-search {
   display: flex;
   gap: 0.5rem;
@@ -237,7 +246,8 @@ body,
   font-size: 0.9rem;
 }
 
-/* Kategorier (fagkoder/emner) på forsiden */
+/* Kategorier (fagkoder) */
+
 .home-category {
   margin-bottom: 1.5rem;
 }
@@ -284,7 +294,9 @@ body,
   color: #6b7280;
 }
 
-/* ---------- BUTTONS ---------- */
+/* =========================
+   5. KNAPPER
+   ========================= */
 
 .btn {
   display: inline-flex;
@@ -336,7 +348,9 @@ body,
   background-color: #b91c1c;
 }
 
-/* ---------- Search / filter (quiz list page) ---------- */
+/* =========================
+   6. SØK / FILTER (QUIZ-LISTE)
+   ========================= */
 
 .quiz-search {
   display: flex;
@@ -352,7 +366,9 @@ body,
   font-size: 0.9rem;
 }
 
-/* ---------- Quiz table (egen /quizzes-side) ---------- */
+/* =========================
+   7. QUIZ-TABELL (EGEN /quizzes-side)
+   ========================= */
 
 .quiz-table {
   width: 100%;
@@ -372,12 +388,17 @@ body,
   font-weight: 600;
 }
 
+/* Brukes som actions-kolonne i tabellen – samme klasse-navn
+   som quiz-actions under quiz-take, men layouten (flex + gap)
+   er lik, så det er greit å dele. */
 .quiz-actions {
   display: flex;
   gap: 0.4rem;
 }
 
-/* ---------- Forms (create/edit/login) ---------- */
+/* =========================
+   8. FORMS (CREATE / EDIT / LOGIN)
+   ========================= */
 
 .form {
   display: flex;
@@ -420,7 +441,9 @@ body,
   margin-top: 0.5rem;
 }
 
-/* ---------- Loader ---------- */
+/* =========================
+   9. LOADER
+   ========================= */
 
 .loader {
   display: inline-flex;
@@ -449,7 +472,9 @@ body,
   }
 }
 
-/* ---------- Error alert ---------- */
+/* =========================
+   10. FEIL / ALERT
+   ========================= */
 
 .error-alert {
   background-color: #fee2e2;
@@ -461,7 +486,9 @@ body,
   margin-bottom: 0.75rem;
 }
 
-/* ---------- Confirm dialog ---------- */
+/* =========================
+   11. CONFIRM DIALOG
+   ========================= */
 
 .confirm-dialog-backdrop {
   position: fixed;
@@ -500,42 +527,86 @@ body,
   gap: 0.5rem;
 }
 
-/* ---------- Quiz take / result layout ---------- */
+/* =========================
+   12. QUIZ: TAKE / RESULT – LAYOUT
+   ========================= */
 
-/* Quiz-take og result skal ikke ha stor card rundt alt */
+/* Quiz-take og result skal ikke ha stort kort rundt alt */
 .page-quiz-take,
 .page-quiz-result {
   max-width: 960px;
-  margin: 2rem auto;
+  margin: -1rem auto;
   padding: 0 0 2rem;
   background: none;
   box-shadow: none;
 }
 
-/* Top bar med fagkode/tittel + X */
+/* Topplinje: Course (venstre) – Title (midten-ish) – X (helt høyre) */
 .quiz-top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  position: relative;
+  width: 91vw;                        /* full viewport-bredde */
+  margin-left: calc(50% - 50vw);       /* "bryt ut" av 960px-containeren */
   padding: 1.5rem 2rem 0.75rem;
 }
 
-.quiz-header-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.quiz-subject {
+.quiz-top-course {
+  position: absolute;
+  left: 2.5rem;
+  top: 60%;
+  transform: translateY(-50%);
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--color-secondary);
 }
 
+.quiz-top-title {
+  margin: 0;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Venstresiden: Course + tittel på én linje */
+.quiz-header-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+/* Course-kode */
+.quiz-subject {
+  position: absolute;
+  left: 2rem;
+  top: 1.8rem;
+
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-secondary);
+}
+
+/* Quiz-tittel (brukes på take + result) */
+.quiz-title,
+.page-quiz-result .page-title {
+  margin: 0;
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* X-knappen – posisjonert helt øverst til høyre */
 .quiz-exit-btn {
+  position: absolute;
+  right: 2.5rem;
+  top: 50%;
+  transform: translateY(-50%);
   border: none;
   background: #ffffff;
   border-radius: 999px;
@@ -555,12 +626,23 @@ body,
   background-color: #f3f4f6;
 }
 
+/* Beskrivelse under header */
 .quiz-description {
   margin: 0 2rem 1rem;
   color: #4b5563;
 }
 
-/* Spørsmålskort på quiz-take */
+/* Kort oppsummeringstekst på resultatsiden (score + counts) */
+.quiz-result {
+  margin: 0.75rem 2rem 1.25rem;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+/* =========================
+   13. QUIZ: SPØRSMÅL / SVAR (TAKE)
+   ========================= */
+
 .quiz-question-card {
   margin: 0.75rem 2rem 0.75rem;
   padding: 1rem 1.25rem;
@@ -600,7 +682,7 @@ body,
   border-radius: 0.5rem;
 }
 
-/* Options list */
+/* Liste med svaralternativer */
 .quiz-options-list {
   list-style: none;
   padding: 0;
@@ -625,22 +707,23 @@ body,
   font-size: 0.9rem;
 }
 
-/* valgt / korrekt / feil svar */
+/* Valgt / korrekt / feil */
 .quiz-option-selected {
   border-color: var(--color-primary);
   background-color: #e4f0ee;
 }
 
 .quiz-option-correct {
-  border-color: #16a34a;
+  border-color: #14552c;
   background-color: #ecfdf5;
 }
 
 .quiz-option-incorrect {
-  border-color: #dc2626;
+  border-color: #781616;
   background-color: #fef2f2;
 }
 
+/* Navigasjon nederst på quiz-take (forrige/neste/submit) */
 .quiz-navigation {
   display: flex;
   justify-content: space-between;
@@ -648,6 +731,7 @@ body,
   gap: 0.5rem;
 }
 
+/* Ekstra actions-linje under quiz (resett, osv) */
 .quiz-actions {
   display: flex;
   gap: 0.5rem;
@@ -655,7 +739,9 @@ body,
   flex-wrap: wrap;
 }
 
-/* ---------- RESULT SUMMARY ---------- */
+/* =========================
+   14. QUIZ: RESULTAT-OPPSUMMERING
+   ========================= */
 
 .quiz-result-summary {
   margin: 0.75rem 2rem 1.25rem;
@@ -700,7 +786,9 @@ body,
   background-color: #fef2f2;
 }
 
-/* ---------- RESPONSIVE QUIZ LAYOUT ---------- */
+/* =========================
+   15. RESPONSIVT (MOBILE)
+   ========================= */
 
 @media (max-width: 640px) {
   .quiz-top-bar {
@@ -712,7 +800,8 @@ body,
   .quiz-result-question-card,
   .quiz-actions,
   .quiz-navigation,
-  .quiz-description {
+  .quiz-description,
+  .quiz-result {
     margin-left: 1.25rem;
     margin-right: 1.25rem;
   }
@@ -722,7 +811,10 @@ body,
   }
 }
 
-/* ---------- GRID ---------- */
+/* =========================
+   16. GRID / QUIZ-KORT PÅ FORSIDEN
+   ========================= */
+
 .browse-subject-quizzes-grid {
   display: grid;
   gap: 1.5rem;
@@ -768,5 +860,3 @@ body,
   color: #4b5563;
   font-size: 0.9rem;
 }
-
-

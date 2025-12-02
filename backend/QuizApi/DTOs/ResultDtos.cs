@@ -1,11 +1,16 @@
 namespace QuizApi.DTOs
 {
-    // Create result DTO
+    // DTO used when creating a quiz result after submission.
     public record ResultCreateDto(string UserId, int QuizId, int CorrectCount, int TotalQuestions);
 
-    // Read result DTO with Percentage
+    // DTO returned when reading results, includes percentage for convenience.
     public record ResultReadDto(
-        int ResultId, string UserId, int QuizId,
-        int CorrectCount, int TotalQuestions,
-        DateTime CompletedAt, double Percentage);
+        int ResultId,
+        string UserId,
+        int QuizId,
+        int CorrectCount,
+        int TotalQuestions,
+        DateTime CompletedAt,
+        double Percentage
+    );
 }

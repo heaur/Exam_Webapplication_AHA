@@ -14,7 +14,7 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getQuiz } from "./QuizService";
-import type { Quiz, Question } from "../types/quiz";
+import type { Quiz, Question, Option } from "../types/quiz";
 import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
@@ -22,14 +22,14 @@ import ErrorAlert from "../components/ErrorAlert";
 // Simple mapping: questionId -> selected option index (0-3) or null
 type AnswerMap = Record<number, number | null>;
 
-// Narrow type describing what the backend *might* send for a single quiz.
-// We keep everything optional because the API is not fully consistent
-// (sometimes it returns a "summary" without questions).
+// Narrow type describing what the backend might send for a single quiz.
+// Everything is optional because the API is not perfectly consistent.
 type RawQuizFromApi = {
   id?: number;
   subjectCode?: string | null;
   title?: string | null;
   description?: string | null;
+  imageUrl?: string | null;
   isPublished?: boolean | null;
   questions?: Question[] | null;
 };
@@ -62,12 +62,11 @@ const QuizTakePage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // We accept that the backend might return a "summary" object
-        // without questions, so we cast to our RawQuizFromApi helper type.
+        // Accept that backend might return a "summary" object
+        // without questions, so cast to RawQuizFromApi helper type.
         const raw = (await getQuiz(Number(id))) as RawQuizFromApi;
 
-        // Normalise questions: always an array on the frontend,
-        // even if backend omitted the property or returned null.
+        // Normalise questions: always an array on the frontend.
         const questions: Question[] = Array.isArray(raw.questions)
           ? raw.questions
           : [];
@@ -75,10 +74,11 @@ const QuizTakePage: React.FC = () => {
         // Normalise into our strict Quiz type so the rest of the
         // component can rely on a stable shape.
         const q: Quiz = {
-          id: raw.id,
+          id: raw.id ?? Number(id),
           subjectCode: raw.subjectCode ?? "",
           title: raw.title ?? "Untitled quiz",
-          description: raw.description ?? undefined,
+          description: raw.description ?? "",
+          imageUrl: raw.imageUrl ?? "",
           isPublished: raw.isPublished ?? false,
           questions,
         };
@@ -119,7 +119,6 @@ const QuizTakePage: React.FC = () => {
   // ------------------------------------------------------
   // Event handlers
   // ------------------------------------------------------
-
   function handleExit() {
     // Just go back to home page when user clicks the "X" button.
     navigate("/");
@@ -139,8 +138,6 @@ const QuizTakePage: React.FC = () => {
     let score = 0;
     let maxScore = 0;
 
-    // We know quiz.questions is always an array after normalisation,
-    // but we still assign to a local const for clarity.
     const questionList: Question[] = quiz.questions ?? [];
 
     for (const question of questionList) {
@@ -150,7 +147,9 @@ const QuizTakePage: React.FC = () => {
       maxScore += question.points;
 
       const chosenIndex = answers[qId];
-      const correctIndex = question.options.findIndex((opt) => opt.isCorrect);
+      const correctIndex = question.options.findIndex(
+        (opt: Option) => opt.isCorrect
+      );
 
       if (chosenIndex != null && chosenIndex === correctIndex) {
         score += question.points;
@@ -259,7 +258,7 @@ const QuizTakePage: React.FC = () => {
 
             {/* Single-choice options */}
             <ul className="quiz-options-list">
-              {question.options.map((opt, optIndex) => (
+              {question.options.map((opt: Option, optIndex: number) => (
                 <li key={optIndex} className="quiz-option">
                   <label>
                     <input

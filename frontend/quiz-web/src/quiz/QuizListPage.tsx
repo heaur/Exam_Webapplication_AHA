@@ -1,12 +1,6 @@
 // src/quiz/QuizListPage.tsx
 // --------------------------
 // Page for listing all quizzes (the "Read" part of CRUD).
-// Demonstrates:
-// - Loading state
-// - Error handling
-// - Client-side search/filter
-// - Basic actions (view, edit, delete)
-// - Conditional UI based on authentication state
 
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -17,32 +11,22 @@ import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 import ConfirmDialog from "../components/ConfirmDialog";
 
-
 const QuizListPage: React.FC = () => {
-  // Current authenticated user (or null if not logged in)
   const { user } = useAuth();
 
-  // All quizzes returned from the backend
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
-  // The current value of the search/filter input
   const [search, setSearch] = useState("");
-  // Indicates whether we are currently loading data from the backend
   const [loading, setLoading] = useState(true);
-  // Holds an error message if something goes wrong while loading
   const [error, setError] = useState<string | null>(null);
+
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [quizToDelete, setQuizToDelete] = useState<QuizSummary | null>(null);
 
-
-  // Load quizzes once when the component is first rendered
+  // Load quizzes once on mount
   useEffect(() => {
     void loadQuizzes();
   }, []);
 
-  /**
-   * Loads quizzes from the backend API and updates local state.
-   * This function is also used when the user clicks the "Refresh" button.
-   */
   async function loadQuizzes() {
     try {
       setLoading(true);
@@ -61,11 +45,6 @@ const QuizListPage: React.FC = () => {
     }
   }
 
-  /**
-   * Handles the delete action for a single quiz.
-   * Asks the user for confirmation and then calls the API.
-   * On success, the quiz is removed from the local state.
-   */
   function openDeleteConfirm(quiz: QuizSummary) {
     setQuizToDelete(quiz);
     setConfirmOpen(true);
@@ -84,7 +63,6 @@ const QuizListPage: React.FC = () => {
 
     try {
       await deleteQuiz(quizToDelete.id);
-      // Fjern quizen lokalt
       setQuizzes((prev) => prev.filter((q) => q.id !== quizToDelete.id));
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -97,14 +75,20 @@ const QuizListPage: React.FC = () => {
     }
   }
 
-  /**
-   * Client-side filtering by quiz title (case-insensitive).
-   * This satisfies the requirement for search/filtering in the frontend.
-   */
+  // Client-side filtering by title
   const filtered = quizzes.filter((quiz) => {
+    const term = search.trim().toLowerCase();
+    if (!term) return true; // hvis søkefeltet er tomt, vis alle
+
     const title = quiz.title?.toLowerCase() ?? "";
-    const term = search.toLowerCase();
-    return title.includes(term);
+    const subject = quiz.subjectCode?.toLowerCase() ?? "";
+    const description = quiz.description?.toLowerCase() ?? "";
+
+    return (
+      title.includes(term) ||
+      subject.includes(term) ||
+      description.includes(term)
+    );
   });
 
   return (
@@ -112,7 +96,6 @@ const QuizListPage: React.FC = () => {
       <div className="page-header">
         <h1 className="page-title">Quizzes</h1>
 
-        {/* Only show "Create New Quiz" button if the user is logged in */}
         {user && (
           <Link to="/quizzes/create" className="btn btn-primary">
             Create New Quiz
@@ -120,11 +103,11 @@ const QuizListPage: React.FC = () => {
         )}
       </div>
 
-      {/* Search/filter input and refresh button */}
+      {/* Search/filter + refresh */}
       <div className="quiz-search">
         <input
           type="text"
-          placeholder="Search quizzes by title..."
+          placeholder="Search by course code, title or description..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -138,16 +121,13 @@ const QuizListPage: React.FC = () => {
         </button>
       </div>
 
-      {/* Loading and error states */}
       {loading && <Loader />}
       {error && <ErrorAlert message={error} />}
 
-      {/* No quizzes found after filtering (and not loading, and no error) */}
       {!loading && !error && filtered.length === 0 && (
         <p>No quizzes found.</p>
       )}
 
-      {/* Quiz table */}
       {!loading && !error && filtered.length > 0 && (
         <table className="quiz-table">
           <thead>
@@ -167,7 +147,6 @@ const QuizListPage: React.FC = () => {
                 <td>{quiz.totalPoints}</td>
                 <td>{quiz.isPublished ? "Yes" : "No"}</td>
                 <td className="quiz-actions">
-                  {/* View/take quiz link - allowed for everyone */}
                   <Link
                     to={`/quizzes/${quiz.id}/take`}
                     className="btn btn-secondary"
@@ -175,7 +154,6 @@ const QuizListPage: React.FC = () => {
                     Take
                   </Link>
 
-                  {/* Edit/Delete actions - only for logged in users */}
                   {user && (
                     <>
                       <Link

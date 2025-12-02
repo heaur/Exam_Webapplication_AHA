@@ -3,122 +3,166 @@
 // Centralised service for all quiz-related HTTP calls.
 // Talks to the ASP.NET Core API (QuizController).
 
-import type { Quiz, QuizSummary } from "../types/quiz";
+import type { Quiz, QuizSummary, Question } from "../types/quiz";
 
-// Base URL from Vite env. Fallback to localhost:5154 if missing.
+// ======================================================
+// API BASE CONFIG
+// ======================================================
+
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   "http://localhost:5154";
 
-// Controller name = "Quiz"  => base URL = /api/Quiz
 const QUIZ_BASE_URL = `${API_URL}/api/Quiz`;
 
-/**
- * Builds default headers.
- * We *could* sende Authorization: Bearer <token> her,
- * men i ditt oppsett brukes Identity-cookie, så det er ikke nødvendig.
- */
 function jsonHeaders(): HeadersInit {
   return {
     "Content-Type": "application/json",
   };
 }
 
-/**
- * GET /api/Quiz
- * Returns a list of quizzes (summary objects) from the backend.
- */
+// ======================================================
+// TYPE FOR TAKE QUIZ DTO (what backend returns)
+// ======================================================
+
+type TakeQuizApiDto = {
+  id: number;
+  subjectCode: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  isPublished: boolean;
+
+  questions: {
+    id: number;
+    text: string;
+    imageUrl?: string | null;
+    points?: number;
+    options: {
+      id: number;
+      text: string;
+      isCorrect: boolean;
+    }[];
+  }[];
+};
+
+// ======================================================
+// GET ALL QUIZZES (SUMMARY)
+// ======================================================
+
 export async function getQuizzes(): Promise<QuizSummary[]> {
   const response = await fetch(QUIZ_BASE_URL, {
     method: "GET",
     headers: jsonHeaders(),
-    credentials: "include", // <--- VIKTIG
+    credentials: "include",
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to load quizzes.");
+    const msg = await response.text();
+    throw new Error(msg || "Failed to load quizzes.");
   }
 
-  const data = (await response.json()) as QuizSummary[];
-  return data;
+  return (await response.json()) as QuizSummary[];
 }
 
-/**
- * GET /api/Quiz/{id}
- * Loads one full quiz including questions and options.
- */
+// ======================================================
+// GET FULL QUIZ (TAKE VIEW)
+// ======================================================
+
 export async function getQuiz(id: number): Promise<Quiz> {
-  const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
+  const response = await fetch(`${QUIZ_BASE_URL}/${id}/take`, {
     method: "GET",
     headers: jsonHeaders(),
-    credentials: "include", // <--- VIKTIG
+    credentials: "include",
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Failed to load quiz with id ${id}.`);
+    const msg = await response.text();
+    throw new Error(msg || `Failed to load quiz (take view) with id ${id}.`);
   }
 
-  const data = (await response.json()) as Quiz;
-  return data;
+  // Typed DTO from backend
+  const raw = (await response.json()) as TakeQuizApiDto;
+
+  // Normalise questions
+  const questions: Question[] = Array.isArray(raw.questions)
+    ? raw.questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        imageUrl: q.imageUrl ?? undefined,
+        points: q.points ?? 1,
+        options: q.options.map((o) => ({
+          text: o.text,
+          isCorrect: !!o.isCorrect,
+        })),
+      }))
+    : [];
+
+  // Build strict Quiz for frontend
+  const quiz: Quiz = {
+    id: raw.id,
+    subjectCode: raw.subjectCode ?? "",
+    title: raw.title ?? "Untitled quiz",
+    description: raw.description ?? "",
+    imageUrl: raw.imageUrl ?? undefined,
+    isPublished: raw.isPublished ?? false,
+    questions,
+  };
+
+  return quiz;
 }
 
-/**
- * POST /api/Quiz
- * Creates a new quiz.
- */
+// ======================================================
+// CREATE QUIZ
+// ======================================================
+
 export async function createQuiz(quiz: Quiz): Promise<Quiz> {
   const response = await fetch(QUIZ_BASE_URL, {
     method: "POST",
     headers: jsonHeaders(),
-    credentials: "include", // <--- VIKTIG
+    credentials: "include",
     body: JSON.stringify(quiz),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Failed to create quiz.");
+    const msg = await response.text();
+    throw new Error(msg || "Failed to create quiz.");
   }
 
-  const data = (await response.json()) as Quiz;
-  return data;
+  return (await response.json()) as Quiz;
 }
 
-/**
- * PUT /api/Quiz/{id}
- * Updates an existing quiz.
- */
-export async function updateQuiz(id: number, quiz: Quiz): Promise<Quiz> {
+// ======================================================
+// UPDATE QUIZ
+// ======================================================
+
+export async function updateQuiz(id: number, quiz: Quiz): Promise<void> {
   const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
     method: "PUT",
     headers: jsonHeaders(),
-    credentials: "include", // <--- VIKTIG
+    credentials: "include",
     body: JSON.stringify(quiz),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Failed to update quiz with id ${id}.`);
+    const msg = await response.text();
+    throw new Error(msg || `Failed to update quiz with id ${id}.`);
   }
-
-  const data = (await response.json()) as Quiz;
-  return data;
 }
 
-/**
- * DELETE /api/Quiz/{id}
- * Deletes the quiz.
- */
+// ======================================================
+// DELETE QUIZ
+// ======================================================
+
 export async function deleteQuiz(id: number): Promise<void> {
   const response = await fetch(`${QUIZ_BASE_URL}/${id}`, {
     method: "DELETE",
     headers: jsonHeaders(),
-    credentials: "include", // <--- VIKTIG
+    credentials: "include",
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || `Failed to delete quiz with id ${id}.`);
+    const msg = await response.text();
+    throw new Error(msg || `Failed to delete quiz with id ${id}.`);
   }
 }

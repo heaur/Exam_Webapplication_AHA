@@ -22,94 +22,210 @@ namespace QuizApi.Controllers
             _db = db;
         }
 
-
-        // QUIZ METHODS
-
-        // POST /api/quiz.Create a new quiz. User has to be authenticated.  [Authorize]
+        // ======================= QUIZ METHODS =======================
+        // POST /api/quiz
+        // Create a new quiz. User has to be authenticated.
         [HttpPost]
         [Authorize]
-        public async Task<ActionResult<QuizReadDto>> CreateQuiz([FromBody] QuizCreateDto dto, CancellationToken ct)
+        public async Task<ActionResult<QuizReadDto>> CreateQuiz(
+            [FromBody] QuizCreateDto dto,
+            CancellationToken ct)
         {
-            // Basic validation
+            // 1) Valider tittel
             if (string.IsNullOrWhiteSpace(dto.Title))
             {
-                ModelState.AddModelError("Title", "Title is required.");
+                ModelState.AddModelError(nameof(dto.Title), "Title is required.");
                 return ValidationProblem(ModelState);
-                // Returns 400 Bad Request with validation errors if title is missing
             }
 
-            // Read user id from claims as string and store it directly (Quiz.OwnerId is a string)
-            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // 2) Normaliser fagkode
+            var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
+                ? "OTHER"
+                : dto.SubjectCode.Trim().ToUpper();
 
-            // Create new quiz entity
+            // 3) Rydd opp i tekstfelter
+            var description = string.IsNullOrWhiteSpace(dto.Description)
+                ? null
+                : dto.Description.Trim();
+
+            var imageUrl = string.IsNullOrWhiteSpace(dto.ImageUrl)
+                ? null
+                : dto.ImageUrl.Trim();
+
+            // 4) Hent innlogget bruker som eier
+            var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var now = DateTime.UtcNow;
-            var entity = new Quiz
+
+            // 5) Lag selve Quiz-entiteten
+            var quizEntity = new Quiz
             {
-                Title = dto.Title.Trim(),
-                Description = dto.Description?.Trim(),
-                CreatedAt = now,
-                UpdatedAt = null,
+                Title       = dto.Title.Trim(),
+                SubjectCode = subjectCode,
+                Description = description,
+                ImageUrl    = imageUrl,
+                CreatedAt   = now,
+                UpdatedAt   = null,
                 IsPublished = false,
                 PublishedAt = null,
-                OwnerId = ownerId
+                OwnerId     = ownerId
             };
 
-            // Save to database
-            _db.Quizzes.Add(entity);
-            await _db.SaveChangesAsync(ct);
+            _db.Quizzes.Add(quizEntity);
+            await _db.SaveChangesAsync(ct); // trenger QuizId før vi kan lage spørsmål
 
+            // 6) Lag spørsmål + alternativer hvis noe ble sendt inn
+            if (dto.Questions != null && dto.Questions.Count > 0)
+            {
+                foreach (var q in dto.Questions)
+                {
+                    if (string.IsNullOrWhiteSpace(q.Text))
+                        continue; // hopp over tomme spørsmål (burde ikke skje pga validering i frontend)
+
+                    var questionEntity = new Question
+                    {
+                        QuizId = quizEntity.QuizId,
+                        Text   = q.Text.Trim()
+                    };
+
+                    _db.Questions.Add(questionEntity);
+                    await _db.SaveChangesAsync(ct); // får QuestionId før vi lager options
+
+                    if (q.Options != null && q.Options.Count > 0)
+                    {
+                        foreach (var o in q.Options)
+                        {
+                            if (string.IsNullOrWhiteSpace(o.Text))
+                                continue;
+
+                            var optionEntity = new Option
+                            {
+                                QuestionId = questionEntity.QuestionId,
+                                Text       = o.Text.Trim(),
+                                IsCorrect  = o.IsCorrect
+                            };
+
+                            _db.Options.Add(optionEntity);
+                        }
+
+                        // lagre alle options for dette spørsmålet
+                        await _db.SaveChangesAsync(ct);
+                    }
+                }
+            }
+
+            // 7) Bygg read-DTO til respons
             var read = new QuizReadDto(
-                entity.QuizId,
-                entity.Title,
-                entity.Description,
-                entity.CreatedAt,
-                entity.UpdatedAt,
-                entity.IsPublished,
-                entity.PublishedAt,
-                entity.OwnerId,
-                0);
+                Id:            quizEntity.QuizId,
+                Title:         quizEntity.Title,
+                SubjectCode:   quizEntity.SubjectCode,
+                Description:   quizEntity.Description,
+                ImageUrl:      quizEntity.ImageUrl,
+                CreatedAt:     quizEntity.CreatedAt,
+                UpdatedAt:     quizEntity.UpdatedAt,
+                IsPublished:   quizEntity.IsPublished,
+                PublishedAt:   quizEntity.PublishedAt,
+                OwnerId:       quizEntity.OwnerId,
+                QuestionCount: await _db.Questions.CountAsync(q => q.QuizId == quizEntity.QuizId, ct)
+            );
 
-            return CreatedAtAction(nameof(GetQuiz), new { id = entity.QuizId }, read);
-            // Returns 201 Created with the created quiz
+            return CreatedAtAction(nameof(GetQuiz), new { id = quizEntity.QuizId }, read);
         }
 
-        // GET /api/quiz/{id}. Get quiz by ID. User does not have to be logged in. [AllowAnonymous]
+        // GET /api/quiz/{id}
+        // Get quiz by ID (summary with question count only).
         [HttpGet("{id:int}")]
         [AllowAnonymous]
         public async Task<ActionResult<QuizReadDto>> GetQuiz(int id, CancellationToken ct)
         {
-            // Include questions to count them
             var quiz = await _db.Quizzes
                 .Include(q => q.Questions)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(q => q.QuizId == id, ct);
 
-            // If not found, return 404
             if (quiz is null) return NotFound();
 
             var read = new QuizReadDto(
-                quiz.QuizId,
-                quiz.Title,
-                quiz.Description,
-                quiz.CreatedAt,
-                quiz.UpdatedAt,
-                quiz.IsPublished,
-                quiz.PublishedAt,
-                quiz.OwnerId,
-                quiz.Questions.Count);
+                Id: quiz.QuizId,
+                Title: quiz.Title,
+                SubjectCode: quiz.SubjectCode,
+                Description: quiz.Description,
+                ImageUrl: quiz.ImageUrl,
+                CreatedAt: quiz.CreatedAt,
+                UpdatedAt: quiz.UpdatedAt,
+                IsPublished: quiz.IsPublished,
+                PublishedAt: quiz.PublishedAt,
+                OwnerId: quiz.OwnerId,
+                QuestionCount: quiz.Questions.Count
+            );
 
             return Ok(read);
-            // Returns 200 OK with the quiz data
         }
 
-        // GET /api/quiz. Lists quizzes. User does not have to be logged in. [AllowAnonymous]
+        // GET /api/quiz/{id}/take
+        // Returnerer full quiz for "take view" (inkludert questions + options).
+        [HttpGet("{id:int}/take")]
+        [AllowAnonymous]
+        public async Task<ActionResult<TakeQuizDto>> GetQuizForTake(
+            int id,
+            CancellationToken ct)
+        {
+            // Hent quiz med spørsmål og alternativer
+            var quiz = await _db.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(q => q.Options)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(q => q.QuizId == id, ct);
+
+            if (quiz is null) return NotFound();
+
+            // Bygg DTO som frontend bruker i QuizTakePage
+            var dto = new TakeQuizDto
+            {
+                Id          = quiz.QuizId,
+                SubjectCode = quiz.SubjectCode ?? string.Empty,
+                Title       = quiz.Title,
+                Description = quiz.Description ?? string.Empty,
+                ImageUrl    = quiz.ImageUrl ?? string.Empty,
+                IsPublished = quiz.IsPublished,
+
+                Questions = quiz.Questions
+                    .OrderBy(q => q.QuestionId)
+                    .Select(q => new TakeQuestionDto
+                    {
+                        Id       = q.QuestionId,
+                        Text     = q.Text,
+                        // Entity-en din har ikke bilde/poeng, så vi bruker standardverdier:
+                        ImageUrl = null,
+                        Points   = 1, // 1 poeng per spørsmål
+
+                        Options = q.Options
+                            .OrderBy(o => o.OptionID)
+                            .Select(o => new TakeOptionDto
+                            {
+                                Id        = o.OptionID,
+                                Text      = o.Text,
+                                IsCorrect = o.IsCorrect
+                            })
+                            .ToList()
+                    })
+                    .ToList()
+            };
+
+            return Ok(dto);
+        }
+
+        // GET /api/quiz
+        // List quizzes for the homepage / browse view. Optional search by title.
         [HttpGet]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<QuizReadDto>>> ListQuizzes(
             [FromQuery] string? search,
             CancellationToken ct)
         {
-            var query = _db.Quizzes.Include(q => q.Questions).AsNoTracking().AsQueryable();
+            var query = _db.Quizzes
+                .Include(q => q.Questions)
+                .AsNoTracking()
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(q => q.Title.Contains(search));
@@ -119,36 +235,63 @@ namespace QuizApi.Controllers
                 .Select(q => new QuizReadDto(
                     q.QuizId,
                     q.Title,
+                    q.SubjectCode,
                     q.Description,
+                    q.ImageUrl,
                     q.CreatedAt,
                     q.UpdatedAt,
                     q.IsPublished,
                     q.PublishedAt,
                     q.OwnerId,
-                    q.Questions.Count))
+                    q.Questions.Count
+                ))
                 .ToListAsync(ct);
 
             return Ok(items);
-            // Returns 200 OK with the list of quizzes
         }
 
-        // PUT /api/quiz/{id}. Method for updating quiz. User has to be logged in. Only owner can edit.[Authorize]
+        // PUT /api/quiz/{id}
+        // Update quiz metadata. Only owner can edit.
         [HttpPut("{id:int}")]
         [Authorize]
-        public async Task<IActionResult> UpdateQuiz(int id, [FromBody] QuizUpdateDto dto, CancellationToken ct)
+        public async Task<IActionResult> UpdateQuiz(
+            int id,
+            [FromBody] QuizUpdateDto dto,
+            CancellationToken ct)
         {
             var quiz = await _db.Quizzes.FirstOrDefaultAsync(q => q.QuizId == id, ct);
             if (quiz is null) return NotFound();
 
-            // Owner check
             var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (!string.IsNullOrEmpty(ownerClaim) && !string.IsNullOrEmpty(quiz.OwnerId) && quiz.OwnerId != ownerClaim)
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(quiz.OwnerId) &&
+                quiz.OwnerId != ownerClaim)
+            {
                 return Forbid();
+            }
 
-            if (!string.IsNullOrWhiteSpace(dto.Title))
-                quiz.Title = dto.Title.Trim();
+            if (string.IsNullOrWhiteSpace(dto.Title))
+            {
+                ModelState.AddModelError(nameof(dto.Title), "Title is required.");
+                return ValidationProblem(ModelState);
+            }
 
-            quiz.Description = dto.Description?.Trim();
+            var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
+                ? "OTHER"
+                : dto.SubjectCode.Trim().ToUpper();
+
+            var description = string.IsNullOrWhiteSpace(dto.Description)
+                ? null
+                : dto.Description.Trim();
+
+            var imageUrl = string.IsNullOrWhiteSpace(dto.ImageUrl)
+                ? null
+                : dto.ImageUrl.Trim();
+
+            quiz.Title = dto.Title.Trim();
+            quiz.SubjectCode = subjectCode;
+            quiz.Description = description;
+            quiz.ImageUrl = imageUrl;
 
             if (dto.IsPublished.HasValue)
             {
@@ -160,17 +303,18 @@ namespace QuizApi.Controllers
                 else if (!dto.IsPublished.Value && quiz.IsPublished)
                 {
                     quiz.IsPublished = false;
+                    quiz.PublishedAt = null;
                 }
             }
 
             quiz.UpdatedAt = DateTime.UtcNow;
-            // Save changes
+
             await _db.SaveChangesAsync(ct);
             return NoContent();
-            // Returns 204 No Content on success
         }
 
-        // DELETE /api/quiz/{id}. Deletes quiz. User has to be logged in.  [Authorize]
+        // DELETE /api/quiz/{id}
+        // Delete quiz. Only owner can delete.
         [HttpDelete("{id:int}")]
         [Authorize]
         public async Task<IActionResult> DeleteQuiz(int id, CancellationToken ct)
@@ -178,26 +322,28 @@ namespace QuizApi.Controllers
             var quiz = await _db.Quizzes.FirstOrDefaultAsync(q => q.QuizId == id, ct);
             if (quiz is null) return NotFound();
 
-            // Owner check
-            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier); // This is a string from Identity
-            if (!string.IsNullOrEmpty(ownerClaim) && !string.IsNullOrEmpty(quiz.OwnerId) && quiz.OwnerId != ownerClaim)
-            return Forbid();
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(quiz.OwnerId) &&
+                quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             _db.Quizzes.Remove(quiz);
-            // Save changes
             await _db.SaveChangesAsync(ct);
             return NoContent();
-            // Returns 204 No Content on success
         }
 
-        //QUESTIONS METHODS
+        // ======================= QUESTIONS (NESTED) =======================
 
-        // POST /api/quiz/{quizId}/questions. Creates/adds question. User has to be logged in. [Authorize]
         [HttpPost("{quizId:int}/questions")]
         [Authorize]
-        public async Task<ActionResult<QuestionReadDto>> AddQuestion(int quizId, [FromBody] QuestionCreateDto dto, CancellationToken ct)
+        public async Task<ActionResult<QuestionReadDto>> AddQuestion(
+            int quizId,
+            [FromBody] QuestionCreateDto dto,
+            CancellationToken ct)
         {
-            // Ensure body belongs to the route quiz
             if (dto.QuizId != quizId)
             {
                 ModelState.AddModelError("QuizId", "QuizId must match the route quizId.");
@@ -213,20 +359,20 @@ namespace QuizApi.Controllers
             var quizExists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
             if (!quizExists) return NotFound();
 
-            // Create and save question
             var q = new Question { Text = dto.Text.Trim(), QuizId = quizId };
             _db.Questions.Add(q);
             await _db.SaveChangesAsync(ct);
 
             var read = new QuestionReadDto(q.QuestionId, q.Text, q.QuizId);
             return CreatedAtAction(nameof(GetQuestion), new { quizId, questionId = q.QuestionId }, read);
-            // Returns 201 Created with the created question
         }
 
-        // GET /api/quiz/{quizId}/questions/{questionId}  [AllowAnonymous]
         [HttpGet("{quizId:int}/questions/{questionId:int}")]
         [AllowAnonymous]
-        public async Task<ActionResult<QuestionReadDto>> GetQuestion(int quizId, int questionId, CancellationToken ct)
+        public async Task<ActionResult<QuestionReadDto>> GetQuestion(
+            int quizId,
+            int questionId,
+            CancellationToken ct)
         {
             var q = await _db.Questions
                 .AsNoTracking()
@@ -236,10 +382,13 @@ namespace QuizApi.Controllers
             return Ok(new QuestionReadDto(q.QuestionId, q.Text, q.QuizId));
         }
 
-        // PUT /api/quiz/{quizId}/questions/{questionId}  [Authorize]
         [HttpPut("{quizId:int}/questions/{questionId:int}")]
         [Authorize]
-        public async Task<IActionResult> UpdateQuestion(int quizId, int questionId, [FromBody] QuestionUpdateDto dto, CancellationToken ct)
+        public async Task<IActionResult> UpdateQuestion(
+            int quizId,
+            int questionId,
+            [FromBody] QuestionUpdateDto dto,
+            CancellationToken ct)
         {
             var q = await _db.Questions
                 .Include(x => x.Quiz)
@@ -258,10 +407,12 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // DELETE /api/quiz/{quizId}/questions/{questionId}  [Authorize]
         [HttpDelete("{quizId:int}/questions/{questionId:int}")]
         [Authorize]
-        public async Task<IActionResult> DeleteQuestion(int quizId, int questionId, CancellationToken ct)
+        public async Task<IActionResult> DeleteQuestion(
+            int quizId,
+            int questionId,
+            CancellationToken ct)
         {
             var q = await _db.Questions.FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
             if (q is null) return NotFound();
@@ -271,12 +422,15 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // ======================= OPTIONS (nested) =======================
+        // ======================= OPTIONS (NESTED) =======================
 
-        // POST /api/quiz/{quizId}/questions/{questionId}/options  [Authorize]
         [HttpPost("{quizId:int}/questions/{questionId:int}/options")]
         [Authorize]
-        public async Task<ActionResult<OptionReadDto>> AddOption(int quizId, int questionId, [FromBody] OptionCreateDto dto, CancellationToken ct)
+        public async Task<ActionResult<OptionReadDto>> AddOption(
+            int quizId,
+            int questionId,
+            [FromBody] OptionCreateDto dto,
+            CancellationToken ct)
         {
             if (dto.QuestionId != questionId)
             {
@@ -290,21 +444,26 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var question = await _db.Questions.FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
+            var question = await _db.Questions
+                .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
             if (question is null) return NotFound();
 
             var o = new Option { QuestionId = questionId, Text = dto.Text.Trim(), IsCorrect = dto.IsCorrect };
             _db.Options.Add(o);
             await _db.SaveChangesAsync(ct);
 
-            return CreatedAtAction(nameof(GetOption), new { quizId, questionId, optionId = o.OptionID },
+            return CreatedAtAction(nameof(GetOption),
+                new { quizId, questionId, optionId = o.OptionID },
                 new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
         }
 
-        // GET /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [AllowAnonymous]
         [HttpGet("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [AllowAnonymous]
-        public async Task<ActionResult<OptionReadDto>> GetOption(int quizId, int questionId, int optionId, CancellationToken ct)
+        public async Task<ActionResult<OptionReadDto>> GetOption(
+            int quizId,
+            int questionId,
+            int optionId,
+            CancellationToken ct)
         {
             var o = await _db.Options.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
@@ -313,10 +472,14 @@ namespace QuizApi.Controllers
             return Ok(new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
         }
 
-        // PUT /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [Authorize]
         [HttpPut("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [Authorize]
-        public async Task<IActionResult> UpdateOption(int quizId, int questionId, int optionId, [FromBody] OptionUpdateDto dto, CancellationToken ct)
+        public async Task<IActionResult> UpdateOption(
+            int quizId,
+            int questionId,
+            int optionId,
+            [FromBody] OptionUpdateDto dto,
+            CancellationToken ct)
         {
             var o = await _db.Options
                 .Include(x => x.Question)
@@ -337,10 +500,13 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // DELETE /api/quiz/{quizId}/questions/{questionId}/options/{optionId}  [Authorize]
         [HttpDelete("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
         [Authorize]
-        public async Task<IActionResult> DeleteOption(int quizId, int questionId, int optionId, CancellationToken ct)
+        public async Task<IActionResult> DeleteOption(
+            int quizId,
+            int questionId,
+            int optionId,
+            CancellationToken ct)
         {
             var o = await _db.Options.FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
             if (o is null) return NotFound();
@@ -350,12 +516,14 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // ======================= RESULTS =======================
+        // ======================= RESULTS (NESTED) =======================
 
-        // POST /api/quiz/{quizId}/results  [Authorize]
         [HttpPost("{quizId:int}/results")]
         [Authorize]
-        public async Task<ActionResult<ResultReadDto>> SubmitResult(int quizId, [FromBody] ResultCreateDto dto, CancellationToken ct)
+        public async Task<ActionResult<ResultReadDto>> SubmitResult(
+            int quizId,
+            [FromBody] ResultCreateDto dto,
+            CancellationToken ct)
         {
             if (dto.QuizId != quizId)
             {
@@ -398,13 +566,17 @@ namespace QuizApi.Controllers
                 result.CompletedAt,
                 result.Percentage);
 
-            return CreatedAtAction(nameof(GetResult), new { quizId, resultId = result.ResultId }, read);
+            return CreatedAtAction(nameof(GetResult),
+                new { quizId, resultId = result.ResultId },
+                read);
         }
 
-        // GET /api/quiz/{quizId}/results/{resultId}  [Authorize]
         [HttpGet("{quizId:int}/results/{resultId:int}")]
         [Authorize]
-        public async Task<ActionResult<ResultReadDto>> GetResult(int quizId, int resultId, CancellationToken ct)
+        public async Task<ActionResult<ResultReadDto>> GetResult(
+            int quizId,
+            int resultId,
+            CancellationToken ct)
         {
             var r = await _db.Results.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.ResultId == resultId && x.QuizId == quizId, ct);
