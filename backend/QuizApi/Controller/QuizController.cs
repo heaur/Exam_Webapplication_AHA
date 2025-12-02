@@ -22,7 +22,10 @@ namespace QuizApi.Controllers
             _db = db;
         }
 
-        // ======================= QUIZ METHODS =======================
+        // ===========================================================
+        //                       QUIZ (CRUD)
+        // ===========================================================
+
         // POST /api/quiz
         // Create a new quiz. User has to be authenticated.
         [HttpPost]
@@ -79,7 +82,7 @@ namespace QuizApi.Controllers
                 foreach (var q in dto.Questions)
                 {
                     if (string.IsNullOrWhiteSpace(q.Text))
-                        continue; // hopp over tomme spørsmål (burde ikke skje pga validering i frontend)
+                        continue;
 
                     var questionEntity = new Question
                     {
@@ -88,7 +91,7 @@ namespace QuizApi.Controllers
                     };
 
                     _db.Questions.Add(questionEntity);
-                    await _db.SaveChangesAsync(ct); // får QuestionId før vi lager options
+                    await _db.SaveChangesAsync(ct); // får QuestionId
 
                     if (q.Options != null && q.Options.Count > 0)
                     {
@@ -107,7 +110,6 @@ namespace QuizApi.Controllers
                             _db.Options.Add(optionEntity);
                         }
 
-                        // lagre alle options for dette spørsmålet
                         await _db.SaveChangesAsync(ct);
                     }
                 }
@@ -162,14 +164,13 @@ namespace QuizApi.Controllers
         }
 
         // GET /api/quiz/{id}/take
-        // Returnerer full quiz for "take view" (inkludert questions + options).
+        // Full quiz for "take view" (inkl. questions + options).
         [HttpGet("{id:int}/take")]
         [AllowAnonymous]
         public async Task<ActionResult<TakeQuizDto>> GetQuizForTake(
             int id,
             CancellationToken ct)
         {
-            // Hent quiz med spørsmål og alternativer
             var quiz = await _db.Quizzes
                 .Include(q => q.Questions)
                     .ThenInclude(q => q.Options)
@@ -178,7 +179,6 @@ namespace QuizApi.Controllers
 
             if (quiz is null) return NotFound();
 
-            // Bygg DTO som frontend bruker i QuizTakePage
             var dto = new TakeQuizDto
             {
                 Id          = quiz.QuizId,
@@ -187,18 +187,15 @@ namespace QuizApi.Controllers
                 Description = quiz.Description ?? string.Empty,
                 ImageUrl    = quiz.ImageUrl ?? string.Empty,
                 IsPublished = quiz.IsPublished,
-
-                Questions = quiz.Questions
+                Questions   = quiz.Questions
                     .OrderBy(q => q.QuestionId)
                     .Select(q => new TakeQuestionDto
                     {
                         Id       = q.QuestionId,
                         Text     = q.Text,
-                        // Entity-en din har ikke bilde/poeng, så vi bruker standardverdier:
                         ImageUrl = null,
-                        Points   = 1, // 1 poeng per spørsmål
-
-                        Options = q.Options
+                        Points   = 1,
+                        Options  = q.Options
                             .OrderBy(o => o.OptionID)
                             .Select(o => new TakeOptionDto
                             {
@@ -215,7 +212,7 @@ namespace QuizApi.Controllers
         }
 
         // GET /api/quiz
-        // List quizzes for the homepage / browse view. Optional search by title.
+        // List quizzes for homepage / browse.
         [HttpGet]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<QuizReadDto>>> ListQuizzes(
@@ -231,6 +228,39 @@ namespace QuizApi.Controllers
                 query = query.Where(q => q.Title.Contains(search));
 
             var items = await query
+                .OrderByDescending(q => q.CreatedAt)
+                .Select(q => new QuizReadDto(
+                    q.QuizId,
+                    q.Title,
+                    q.SubjectCode,
+                    q.Description,
+                    q.ImageUrl,
+                    q.CreatedAt,
+                    q.UpdatedAt,
+                    q.IsPublished,
+                    q.PublishedAt,
+                    q.OwnerId,
+                    q.Questions.Count
+                ))
+                .ToListAsync(ct);
+
+            return Ok(items);
+        }
+
+        // GET /api/quiz/my
+        // Alle quizer som innlogget bruker eier (til "Min profil").
+        [HttpGet("my")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<QuizReadDto>>> GetMyQuizzes(
+            CancellationToken ct)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var items = await _db.Quizzes
+                .Where(q => q.OwnerId == userId)
+                .Include(q => q.Questions)
+                .AsNoTracking()
                 .OrderByDescending(q => q.CreatedAt)
                 .Select(q => new QuizReadDto(
                     q.QuizId,
@@ -288,10 +318,10 @@ namespace QuizApi.Controllers
                 ? null
                 : dto.ImageUrl.Trim();
 
-            quiz.Title = dto.Title.Trim();
+            quiz.Title       = dto.Title.Trim();
             quiz.SubjectCode = subjectCode;
             quiz.Description = description;
-            quiz.ImageUrl = imageUrl;
+            quiz.ImageUrl    = imageUrl;
 
             if (dto.IsPublished.HasValue)
             {
@@ -335,7 +365,9 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // ======================= QUESTIONS (NESTED) =======================
+        // ===========================================================
+        //                       QUESTIONS
+        // ===========================================================
 
         [HttpPost("{quizId:int}/questions")]
         [Authorize]
@@ -422,7 +454,9 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // ======================= OPTIONS (NESTED) =======================
+        // ===========================================================
+        //                       OPTIONS
+        // ===========================================================
 
         [HttpPost("{quizId:int}/questions/{questionId:int}/options")]
         [Authorize]
@@ -516,7 +550,9 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // ======================= RESULTS (NESTED) =======================
+        // ===========================================================
+        //                       RESULTS
+        // ===========================================================
 
         [HttpPost("{quizId:int}/results")]
         [Authorize]
@@ -545,26 +581,38 @@ namespace QuizApi.Controllers
             var exists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
             if (!exists) return NotFound();
 
+            // 👇 hent innlogget bruker fra cookie/claims
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
             var result = new Result
             {
-                UserId = dto.UserId,
-                QuizId = dto.QuizId,
-                CorrectCount = dto.CorrectCount,
+                UserId        = userId,                 // bruker innlogget bruker
+                QuizId        = dto.QuizId,
+                CorrectCount  = dto.CorrectCount,
                 TotalQuestions = dto.TotalQuestions,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt   = DateTime.UtcNow
+                // Percentage er read-only i domenemodellen → IKKE sett her
             };
 
             _db.Results.Add(result);
             await _db.SaveChangesAsync(ct);
 
+            // Hent quiz for å kunne sette tittel/fagkode på DTO
+            var quiz = await _db.Quizzes.AsNoTracking()
+                .FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
+
             var read = new ResultReadDto(
-                result.ResultId,
-                result.UserId,
-                result.QuizId,
-                result.CorrectCount,
-                result.TotalQuestions,
-                result.CompletedAt,
-                result.Percentage);
+                ResultId:      result.ResultId,
+                UserId:        result.UserId,
+                QuizId:        result.QuizId,
+                QuizTitle:     quiz?.Title ?? string.Empty,
+                SubjectCode:   quiz?.SubjectCode ?? string.Empty,
+                CorrectCount:  result.CorrectCount,
+                TotalQuestions: result.TotalQuestions,
+                CompletedAt:   result.CompletedAt,
+                Percentage:    result.Percentage    // read-only property fra domenemodellen
+            );
 
             return CreatedAtAction(nameof(GetResult),
                 new { quizId, resultId = result.ResultId },
@@ -579,16 +627,63 @@ namespace QuizApi.Controllers
             CancellationToken ct)
         {
             var r = await _db.Results.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.ResultId == resultId && x.QuizId == quizId, ct);
+                .Join(
+                    _db.Quizzes,
+                    res => res.QuizId,
+                    q   => q.QuizId,
+                    (res, q) => new { res, q }
+                )
+                .FirstOrDefaultAsync(x => x.res.ResultId == resultId && x.res.QuizId == quizId, ct);
 
             if (r is null) return NotFound();
 
             var read = new ResultReadDto(
-                r.ResultId, r.UserId, r.QuizId,
-                r.CorrectCount, r.TotalQuestions,
-                r.CompletedAt, r.Percentage);
+                r.res.ResultId,
+                r.res.UserId,
+                r.res.QuizId,
+                r.q.Title,
+                r.q.SubjectCode,
+                r.res.CorrectCount,
+                r.res.TotalQuestions,
+                r.res.CompletedAt,
+                r.res.Percentage
+            );
 
             return Ok(read);
+        }
+
+        // GET /api/quiz/my/results
+        // All results for the current logged-in user.
+        [HttpGet("my/results")]
+        [Authorize]
+        public async Task<ActionResult<IEnumerable<ResultReadDto>>> GetMyResults(
+            CancellationToken ct)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var items = await _db.Results
+                .Where(r => r.UserId == userId)
+                .OrderByDescending(r => r.CompletedAt)
+                .Join(
+                    _db.Quizzes,
+                    r => r.QuizId,
+                    q => q.QuizId,
+                    (r, q) => new ResultReadDto(
+                        r.ResultId,
+                        r.UserId,
+                        r.QuizId,
+                        q.Title,
+                        q.SubjectCode,
+                        r.CorrectCount,
+                        r.TotalQuestions,
+                        r.CompletedAt,
+                        r.Percentage
+                    )
+                )
+                .ToListAsync(ct);
+
+            return Ok(items);
         }
     }
 }

@@ -3,7 +3,7 @@
 // Centralised service for all quiz-related HTTP calls.
 // Talks to the ASP.NET Core API (QuizController).
 
-import type { Quiz, QuizSummary, Question } from "../types/quiz";
+import type { Quiz, QuizSummary, Question, QuizResult } from "../types/quiz";
 
 // ======================================================
 // API BASE CONFIG
@@ -46,6 +46,27 @@ type TakeQuizApiDto = {
   }[];
 };
 
+// Result DTO from backend for "my results"
+type ResultReadApiDto = {
+  resultId: number;
+  userId: string | null;
+  quizId: number;
+  quizTitle: string;
+  subjectCode: string;
+  correctCount: number;
+  totalQuestions: number;
+  completedAt: string;
+  percentage: number;
+};
+
+// Payload we send when submitting a result
+type ResultCreateApiDto = {
+  quizId: number;
+  correctCount: number;
+  totalQuestions: number;
+  // userId is *not* needed, backend uses logged-in user
+};
+
 // ======================================================
 // GET ALL QUIZZES (SUMMARY)
 // ======================================================
@@ -81,10 +102,8 @@ export async function getQuiz(id: number): Promise<Quiz> {
     throw new Error(msg || `Failed to load quiz (take view) with id ${id}.`);
   }
 
-  // Typed DTO from backend
   const raw = (await response.json()) as TakeQuizApiDto;
 
-  // Normalise questions
   const questions: Question[] = Array.isArray(raw.questions)
     ? raw.questions.map((q) => ({
         id: q.id,
@@ -92,19 +111,19 @@ export async function getQuiz(id: number): Promise<Quiz> {
         imageUrl: q.imageUrl ?? undefined,
         points: q.points ?? 1,
         options: q.options.map((o) => ({
+          id: o.id,
           text: o.text,
           isCorrect: !!o.isCorrect,
         })),
       }))
     : [];
 
-  // Build strict Quiz for frontend
   const quiz: Quiz = {
     id: raw.id,
     subjectCode: raw.subjectCode ?? "",
     title: raw.title ?? "Untitled quiz",
     description: raw.description ?? "",
-    imageUrl: raw.imageUrl ?? undefined,
+    imageUrl: raw.imageUrl ?? "",
     isPublished: raw.isPublished ?? false,
     questions,
   };
@@ -164,5 +183,100 @@ export async function deleteQuiz(id: number): Promise<void> {
   if (!response.ok) {
     const msg = await response.text();
     throw new Error(msg || `Failed to delete quiz with id ${id}.`);
+  }
+}
+
+// ======================================================
+// GET MY QUIZZES (PROFILE PAGE)
+// ======================================================
+
+export async function getMyQuizzes(): Promise<QuizSummary[]> {
+  const response = await fetch(`${QUIZ_BASE_URL}/my`, {
+    method: "GET",
+    headers: jsonHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(
+      "getMyQuizzes failed:",
+      response.status,
+      response.statusText,
+      text
+    );
+    throw new Error(
+      text || `Failed to load quizzes for current user (status ${response.status}).`
+    );
+  }
+
+  return (await response.json()) as QuizSummary[];
+}
+
+// ======================================================
+// GET MY RESULTS (PROFILE PAGE)
+// ======================================================
+
+export async function getMyResults(): Promise<QuizResult[]> {
+  const response = await fetch(`${QUIZ_BASE_URL}/my/results`, {
+    method: "GET",
+    headers: jsonHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(
+      "getMyResults failed:",
+      response.status,
+      response.statusText,
+      text
+    );
+    throw new Error(
+      text || `Failed to load results for current user (status ${response.status}).`
+    );
+  }
+
+  const raw = (await response.json()) as ResultReadApiDto[];
+
+  const mapped: QuizResult[] = raw.map((r) => ({
+    resultId: r.resultId,
+    userId: r.userId,  
+    quizId: r.quizId,
+    quizTitle: r.quizTitle,
+    subjectCode: r.subjectCode,
+    correctCount: r.correctCount,
+    totalQuestions: r.totalQuestions,
+    percentage: r.percentage,
+    completedAt: r.completedAt,
+  }));
+
+  return mapped;
+}
+
+// ======================================================
+// SUBMIT RESULT WHEN USER FINISHES A QUIZ
+// ======================================================
+
+export async function submitResult(
+  quizId: number,
+  payload: ResultCreateApiDto
+): Promise<void> {
+  const response = await fetch(`${QUIZ_BASE_URL}/${quizId}/results`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    credentials: "include",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.error(
+      "submitResult failed:",
+      response.status,
+      response.statusText,
+      text
+    );
+    throw new Error(text || "Failed to submit quiz result.");
   }
 }

@@ -17,6 +17,8 @@ import QuizCreatePage from "./quiz/QuizCreatePage";
 import QuizTakePage from "./quiz/QuizTakePage";
 import QuizResultPage from "./quiz/QuizResultPage";
 
+import ProfilePage from "./profile/ProfilePage";
+
 const App: React.FC = () => {
   return (
     <BrowserRouter>
@@ -34,6 +36,8 @@ const App: React.FC = () => {
               <Route path="/quizzes/create" element={<QuizCreatePage />} />
               <Route path="/quizzes/:id/take" element={<QuizTakePage />} />
               <Route path="/quizzes/:id/result" element={<QuizResultPage />} />
+
+              <Route path="/profile" element={<ProfilePage />} />
 
               <Route path="*" element={<NotFoundPage />} />
             </Routes>

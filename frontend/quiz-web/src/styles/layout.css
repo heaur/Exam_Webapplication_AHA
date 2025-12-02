@@ -1,0 +1,214 @@
+/* ===== APP LAYOUT ===== */
+
+.app-root {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* ===== GENERELLE PAGES ===== */
+
+.page {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+/* Home har egen layout (hero + browse) */
+.page-home {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+/* Egen page-type for quiz-sider – arver i praksis .page-styling */
+.page-quiz-list,
+.page-quiz-create,
+.page-quiz-edit,
+.page-quiz-take {
+  /* bruker .page som base */
+}
+
+.page-title {
+  margin: 0 0 1rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.page-description {
+  margin-bottom: 1.5rem;
+  color: #4b5563;
+}
+
+/* Handlings-linje på Home / NotFound */
+.home-actions,
+.not-found-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.home-info ul {
+  padding-left: 1.25rem;
+}
+
+/* ===== HOME (HERO + BROWSE) ===== */
+
+.home-hero {
+  padding: 2rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(93, 138, 135, 0.12),
+    rgba(122, 143, 163, 0.18)
+  );
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  margin-bottom: 2rem;
+}
+
+.home-hero-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.home-hero-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: #4b5563;
+  max-width: 32rem;
+}
+
+.home-hero-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.home-info {
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+/* Browse-seksjon */
+.home-browse {
+  padding: 1.5rem 2rem 2rem;
+  margin-top: 1.5rem;
+  border-radius: 12px;
+  background-color: #f9fafb;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.home-browse-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.home-browse-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+/* Søkefelt på forsiden */
+.home-browse-search {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.home-browse-search input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border-medium);
+  font-size: 0.9rem;
+}
+
+/* Kategorier (fagkoder) */
+
+.home-category {
+  margin-bottom: 1.5rem;
+}
+
+.home-category-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.home-category-title {
+  font-weight: 600;
+}
+
+.home-category-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.home-quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.home-quiz-card {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid var(--color-border-soft);
+  background-color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.home-quiz-card-title {
+  font-weight: 500;
+}
+
+.home-quiz-card-meta {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* GRID / QUIZ-KORT PÅ FORSIDEN */
+
+.browse-subject-quizzes-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* ===== RESPONSIVT (layout / home) ===== */
+
+@media (max-width: 640px) {
+  .home-browse {
+    padding: 1.25rem 1.5rem 1.75rem;
+  }
+}

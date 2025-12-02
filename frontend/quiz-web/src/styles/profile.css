@@ -1,0 +1,263 @@
+/* src/styles/profile.css */
+/* --------------------------- */
+/* Layout and styling for the profile page.
+   Clean, minimal, card-based design that matches your palette. */
+
+/* ----------------------------------------------------------- */
+/* PAGE LAYOUT                                                */
+/* ----------------------------------------------------------- */
+
+/* Wrapper inne i .app-main – ingen ekstra bakgrunn eller shadow */
+.profile-page {
+  max-width: 960px;
+  margin: 2.5rem auto 3.5rem;
+  padding: 0 1rem; /* litt luft mot kantene på små skjermer */
+}
+
+/* ----------------------------------------------------------- */
+/* OUTER PROFILE CARD                                         */
+/* ----------------------------------------------------------- */
+
+.profile-card {
+  width: 100%;
+  max-width: 880px;              /* slightly wider card */
+  margin: 0 auto;                /* center horizontally */
+  padding: 2.5rem 3rem;
+  border-radius: 24px;
+  background: #f9fbfc;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(148, 163, 184, 0.14);
+}
+
+/* ----------------------------------------------------------- */
+/* HEADER ("My profile" + description)                        */
+/* ----------------------------------------------------------- */
+
+.profile-header {
+  margin-bottom: 1.75rem;
+}
+
+.profile-header .page-title {
+  margin: 0 0 0.25rem;
+}
+
+.profile-header .page-description {
+  margin: 0;
+  color: #5b6570;
+  font-size: 0.95rem;
+}
+
+/* ----------------------------------------------------------- */
+/* GENERIC SECTION CARD (accordion panels)                    */
+/* ----------------------------------------------------------- */
+
+.profile-section {
+  background-color: #ffffff;
+  border-radius: 1.25rem;
+  box-shadow: 0 14px 35px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+/* ----------------------------------------------------------- */
+/* ACCORDION HEADER ROW                                       */
+/* ----------------------------------------------------------- */
+
+.profile-section-header {
+  width: 100%;
+  padding: 1.1rem 1.5rem;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-section-header:hover {
+  background-color: rgba(15, 23, 42, 0.03);
+}
+
+/* Section title and chevron icon */
+.profile-section-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.profile-section-toggle {
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+/* Inner content for each section */
+.profile-section-body {
+  padding: 1.25rem 1.75rem 1.5rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+/* ----------------------------------------------------------- */
+/* USER INFO ("Brukeropplysninger")                           */
+/* ----------------------------------------------------------- */
+
+/* Definition list container */
+.profile-user-info {
+  margin: 0;
+  padding: 0;
+}
+
+/* Single row: label on the left, value on the right */
+.profile-user-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  font-size: 0.95rem;
+}
+
+.profile-user-row + .profile-user-row {
+  border-top: 1px solid #edf1f5;
+}
+
+.profile-user-row dt {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.profile-user-row dd {
+  margin: 0;
+  font-weight: 500;
+}
+
+/* Password row: mask value + place "Change" button next to it */
+.profile-user-row--password dd {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* ----------------------------------------------------------- */
+/* SEARCH FIELD (My results / My quizzes)                      */
+/* ----------------------------------------------------------- */
+
+.profile-search-row {
+  margin-bottom: 1rem;
+}
+
+.profile-search-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  background: #f9fafb;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.profile-search-input:focus {
+  border-color: #6aa5a0; /* your green accent */
+  box-shadow: 0 0 0 2px rgba(106, 165, 160, 0.25);
+}
+
+/* ----------------------------------------------------------- */
+/* LISTS (results + quizzes)                                  */
+/* ----------------------------------------------------------- */
+
+.profile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.profile-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  font-size: 0.95rem;
+}
+
+.profile-list-item + .profile-list-item {
+  border-top: 1px solid #edf1f5;
+}
+
+/* Main text block inside a list item */
+.profile-list-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-list-title {
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+}
+
+.profile-list-meta {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Empty-text helpers */
+.profile-empty-text {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+/* Action buttons on quiz rows (Edit / Delete) */
+.profile-quiz-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* Smaller, subtle buttons */
+.btn.btn-small,
+.btn-small {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
+}
+
+/* ----------------------------------------------------------- */
+/* ERROR BANNERS                                               */
+/* ----------------------------------------------------------- */
+
+.profile-error {
+  margin-bottom: 1rem;
+  border-radius: 0.75rem;
+  padding: 0.7rem 1rem;
+  background-color: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+/* ----------------------------------------------------------- */
+/* FOOTER (LOG OUT BUTTON)                                     */
+/* ----------------------------------------------------------- */
+
+.profile-footer {
+  margin-top: 1.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+/* ----------------------------------------------------------- */
+/* RESPONSIVT                                                  */
+/* ----------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .profile-card {
+    padding: 1.75rem 1.5rem;
+    border-radius: 18px;
+  }
+
+  .profile-section-body {
+    padding: 1rem 1.25rem 1.25rem;
+  }
+}

@@ -7,19 +7,21 @@
 // - Reads quiz id from the URL, loads quiz data from the API.
 // - Renders each question with single-choice radio buttons.
 // - Keeps selected answers in local React state.
-// - On submit, calculates score on the client and navigates
-//   to a result page, passing quiz + answers + score via
-//   React Router's location state.
+// - On submit:
+//    * Calculates score on the client
+//    * Sends the result to the backend (submitResult)
+//    * Navigates to a result page, passing quiz + answers + score
+//      via React Router's location state.
 
 import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { getQuiz } from "./QuizService";
+import { getQuiz, submitResult } from "./QuizService";
 import type { Quiz, Question, Option } from "../types/quiz";
 import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 
-// Simple mapping: questionId -> selected option index (0-3) or null
+// Simple mapping: questionId -> selected option index (0..n) or null
 type AnswerMap = Record<number, number | null>;
 
 // Narrow type describing what the backend might send for a single quiz.
@@ -132,18 +134,26 @@ const QuizTakePage: React.FC = () => {
     }));
   }
 
-  function handleSubmitQuiz() {
+  // Submit the quiz:
+  // 1) Compute score/maxScore for UI (using question.points)
+  // 2) Compute correctCount/totalQuestions for backend
+  // 3) Call submitResult to store the result server-side
+  // 4) Navigate to result page with all data in router state
+  async function handleSubmitQuiz() {
     if (!quiz) return;
 
-    let score = 0;
-    let maxScore = 0;
-
     const questionList: Question[] = quiz.questions ?? [];
+
+    let correctCount = 0;   // number of correctly answered questions
+    let totalQuestions = 0; // number of questions in the quiz
+    let score = 0;          // weighted score using question.points
+    let maxScore = 0;       // max possible score (sum of points)
 
     for (const question of questionList) {
       const qId = question.id;
       if (qId == null) continue;
 
+      totalQuestions += 1;
       maxScore += question.points;
 
       const chosenIndex = answers[qId];
@@ -152,20 +162,34 @@ const QuizTakePage: React.FC = () => {
       );
 
       if (chosenIndex != null && chosenIndex === correctIndex) {
+        correctCount += 1;
         score += question.points;
       }
     }
 
-    // Navigate to result page and pass full data in router state
-    // so that the result view does not need to re-fetch.
-    navigate(`/quizzes/${quiz.id}/result`, {
-      state: {
-        quiz,
-        answers,
-        score,
-        maxScore,
-      },
-    });
+    try {
+      // Persist result in backend – userId is taken from auth cookie/claims.
+      await submitResult(quiz.id!, {
+        quizId: quiz.id!,
+        correctCount,
+        totalQuestions,
+      });
+
+      // Navigate to result page and pass full data in router state
+      // so that the result view does not need to re-fetch.
+      navigate(`/quizzes/${quiz.id}/result`, {
+        state: {
+          quiz,
+          answers,
+          score,
+          maxScore,
+        },
+      });
+    } catch (err) {
+      // If the POST fails, we keep the user on this page so they can retry.
+      console.error("Failed to submit quiz result", err);
+      alert("Failed to submit quiz result. Please try again.");
+    }
   }
 
   // ------------------------------------------------------

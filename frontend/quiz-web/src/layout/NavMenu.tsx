@@ -1,95 +1,102 @@
 // src/layout/NavMenu.tsx
-// ----------------------
-// Top navigation bar for the app.
-//
-// - Logo "Student Quiz" on the left (click -> home)
-// - Links on the right: "Home", "New quiz", "Login"/"Logout"
-// - Hides completely on quiz taking and result pages
+// ----------------------------------------------------
+// Global navigation bar for the app.
+// Hidden on quiz "take" and "result" pages.
+// Shows username (max 8 chars) when logged in.
+// ----------------------------------------------------
 
 import React from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-// øverst
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/UseAuth";
 
+// SUPER SIMPLE: hide nav on any route that is a quiz-take or quiz-result.
+// We assume only quiz-pages use "/take" or "/result" in the path.
+function shouldHideNav(pathname: string): boolean {
+  if (pathname.includes("/take")) return true;
+  if (pathname.includes("/result")) return true;
+  return false;
+}
+
 const NavMenu: React.FC = () => {
+  const { user, isLoading } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
 
-  const path = location.pathname;
-
-  // Hide navbar on quiz-taking and result pages
-  const hideNav =
-    path.startsWith("/quizzes/") &&
-    (path.endsWith("/take") || path.endsWith("/result"));
-
-  if (hideNav) {
+  // Hide navbar completely on quiz take/result
+  if (shouldHideNav(location.pathname)) {
     return null;
   }
 
-  function isActive(to: string): boolean {
-    return path === to;
-  }
-
-  function handleNewQuizClick() {
-    if (!user) {
-      navigate("/login");
-    } else {
-      navigate("/quizzes/create");
-    }
-  }
-
-  function handleLogoutClick() {
-    logout();
-    navigate("/");
-  }
+  // Display name in navbar:
+  // 1) Prefer user.userName from JWT (max 8 chars)
+  // 2) Fallback: first part of email (before "@"), max 8 chars
+  // 3) Fallback: "User"
+  const displayName =
+    user?.userName?.slice(0, 8) ||
+    (user?.email ? user.email.split("@")[0].slice(0, 8) : "User");
 
   return (
     <header className="nav-header">
       <div className="nav-container">
-        {/* Logo / brand on the left */}
+        {/* Left: brand/logo */}
         <Link to="/" className="nav-brand">
           Student Quiz
         </Link>
 
-        {/* Links on the right */}
+        {/* Right: navigation links */}
         <nav className="nav-right">
-          <Link
+          {/* Home */}
+          <NavLink
             to="/"
-            className={`nav-link ${isActive("/") ? "nav-link-active" : ""}`}
+            className={({ isActive }) =>
+              "nav-link" + (isActive ? " nav-link-active" : "")
+            }
           >
             Home
-          </Link>
+          </NavLink>
 
-          <button
-            type="button"
-            className="nav-link"
-            onClick={handleNewQuizClick}
+          {/* New quiz */}
+          <NavLink
+            to="/quizzes/create"
+            className={({ isActive }) =>
+              "nav-link" + (isActive ? " nav-link-active" : "")
+            }
           >
             New quiz
-          </button>
+          </NavLink>
 
-          {!user && (
-            <Link
-              to="/login"
-              className={`nav-link ${
-                isActive("/login") || isActive("/register")
-                  ? "nav-link-active"
-                  : ""
-              }`}
-            >
-              Login
-            </Link>
+          {/* Logged-out links */}
+          {!isLoading && !user && (
+            <>
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  "nav-link" + (isActive ? " nav-link-active" : "")
+                }
+              >
+                Login
+              </NavLink>
+
+              <NavLink
+                to="/register"
+                className={({ isActive }) =>
+                  "nav-link" + (isActive ? " nav-link-active" : "")
+                }
+              >
+                Register
+              </NavLink>
+            </>
           )}
 
-          {user && (
-            <button
-              type="button"
-              className="nav-link"
-              onClick={handleLogoutClick}
+          {/* Logged-in: show username as link to profile */}
+          {!isLoading && user && (
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                "nav-link" + (isActive ? " nav-link-active" : "")
+              }
             >
-              Logout
-            </button>
+              {displayName}
+            </NavLink>
           )}
         </nav>
       </div>
