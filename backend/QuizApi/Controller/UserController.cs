@@ -11,15 +11,12 @@ namespace QuizApi.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
-// CONTROLLER
 public class UserController : ControllerBase
 {
     private readonly ILogger<UserController> _logger;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
 
-    // CONSTRUCTOR
     public UserController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
@@ -30,72 +27,140 @@ public class UserController : ControllerBase
         _logger = logger;
     }
 
-    // LOGIN / LOGOUT / REGISTER METHODS
+    // =========================================================
+    // REGISTER / LOGIN / LOGOUT
+    // =========================================================
 
     // POST /api/user/register
     // Creates a new Identity user and signs them in.
     [HttpPost("register")]
     [AllowAnonymous]
-    public async Task<IActionResult> Register([FromBody] RegisterDto dto, CancellationToken ct)
+    public async Task<IActionResult> Register(
+        [FromBody] RegisterDto dto,
+        CancellationToken ct)
     {
+        // Basic validation
         if (string.IsNullOrWhiteSpace(dto.Username))
+        {
             ModelState.AddModelError(nameof(dto.Username), "Username is required.");
-        if (string.IsNullOrWhiteSpace(dto.Password))
-            ModelState.AddModelError(nameof(dto.Password), "Password is required.");
-        if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        }
+        else
+        {
+            var trimmed = dto.Username.Trim();
 
-        // Uses the same value for UserName 
+            // Enforce max 8 characters for display username
+            if (trimmed.Length > 8)
+            {
+                ModelState.AddModelError(nameof(dto.Username), "Username cannot be longer than 8 characters.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(dto.Password))
+        {
+            ModelState.AddModelError(nameof(dto.Password), "Password is required.");
+        }
+
+        if (!ModelState.IsValid)
+        {
+            return ValidationProblem(ModelState);
+        }
+
+        var username = dto.Username.Trim();
+
+        // Optional: pre-check if username is available (nicer error than Identity)
+        var existing = await _userManager.FindByNameAsync(username);
+        if (existing is not null)
+        {
+            ModelState.AddModelError(nameof(dto.Username), "Username is already taken.");
+            return ValidationProblem(ModelState);
+        }
+
+        // Create ApplicationUser.
+        // We do NOT abuse Username as email anymore.
         var user = new ApplicationUser
         {
-            UserName = dto.Username.Trim(),
+            UserName = username,
             Email = string.IsNullOrWhiteSpace(dto.Email)
-                ? (dto.Username.Contains("@") ? dto.Username.Trim() : null)
+                ? null
                 : dto.Email.Trim(),
             CreatedAt = DateTime.UtcNow
         };
 
-        // Check if username is available
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded)
         {
             foreach (var err in result.Errors)
+            {
                 ModelState.AddModelError(err.Code, err.Description);
+            }
+
+            // 400 with Identity validation errors
             return ValidationProblem(ModelState);
-            // Returns 400 with validation errors
         }
 
-        // Auto sign-in after registration
+        // Auto sign-in after registration (cookie-based auth)
         await _signInManager.SignInAsync(user, isPersistent: false);
 
         var response = new CurrentUserDto(
             Id: user.Id,
-            UserName: user.UserName ?? "",
+            UserName: user.UserName ?? string.Empty,
             Email: user.Email
         );
 
+        // 201 Created + current user info
         return CreatedAtAction(nameof(Me), null, response);
-        // Returns 201 Created with current user info
     }
 
     // POST /api/user/login
-    // Log in existing user.
+    // Log in existing user (cookie-based).
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<IActionResult> Login([FromBody] LoginDto dto, CancellationToken ct)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginDto dto,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
-            return ValidationProblem(new ValidationProblemDetails(new Dictionary<string, string[]>
-            {
-                ["credentials"] = new[] { "Username and password are required." }
-            }));
+        {
+            return ValidationProblem(
+                new ValidationProblemDetails(
+                    new Dictionary<string, string[]>
+                    {
+                        ["credentials"] = new[] { "Username and password are required." }
+                    }
+                )
+            );
+        }
 
-        // Attempt sign-in
-        var result = await _signInManager.PasswordSignInAsync(dto.Username.Trim(), dto.Password, dto.RememberMe, lockoutOnFailure: true);
+        var username = dto.Username.Trim();
 
-        if (result.Succeeded) return NoContent();                 // 204: logged in
-        if (result.IsLockedOut) return Forbid();                  // 403: locked out
-        if (result.IsNotAllowed) return Unauthorized();           // 401: e.g., not confirmed
-        return Unauthorized();                                    // 401: wrong credentials
+        // PasswordSignInAsync creates/updates the auth cookie
+        var result = await _signInManager.PasswordSignInAsync(
+            username,
+            dto.Password,
+            dto.RememberMe,
+            lockoutOnFailure: true
+        );
+
+        if (result.Succeeded)
+        {
+            // 204: logged in, cookie set
+            return NoContent();
+        }
+
+        if (result.IsLockedOut)
+        {
+            // 403: user is locked out
+            return Forbid();
+        }
+
+        if (result.IsNotAllowed)
+        {
+            // 401: maybe email not confirmed, etc.
+            return Unauthorized();
+        }
+
+        // 401: wrong credentials
+        return Unauthorized();
     }
 
     // POST /api/user/logout
@@ -105,79 +170,115 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         await _signInManager.SignOutAsync();
+        // 204: cookie cleared
         return NoContent();
-        // Returns 204 No Content
     }
 
-
-
-    // PROFILE/ACCOUNT METHODS
+    // =========================================================
+    // PROFILE / ACCOUNT
+    // =========================================================
 
     // GET /api/user/me
     // Returns minimal info about the current user.
+    // This is what the frontend uses in AuthContext + navbar.
     [HttpGet("me")]
     [Authorize]
     public async Task<ActionResult<CurrentUserDto>> Me(CancellationToken ct)
     {
-        // Get current user
         var user = await _userManager.GetUserAsync(User);
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
-        return Ok(new CurrentUserDto(
+        var dto = new CurrentUserDto(
             Id: user.Id,
-            UserName: user.UserName ?? "",
+            UserName: user.UserName ?? string.Empty,
             Email: user.Email
-        ));
-        // Returns 200 OK with current user info
+        );
+
+        return Ok(dto);
     }
 
     // PUT /api/user/username
     // Change username for the current user.
     [HttpPut("username")]
     [Authorize]
-    public async Task<IActionResult> UpdateUsername([FromBody] UpdateUsernameDto dto, CancellationToken ct)
+    public async Task<IActionResult> UpdateUsername(
+        [FromBody] UpdateUsernameDto dto,
+        CancellationToken ct)
     {
-        // Validate input
         if (string.IsNullOrWhiteSpace(dto.NewUsername))
-            return ValidationProblem(
-
-        new ValidationProblemDetails(
-        new Dictionary<string, string[]>
         {
-            [nameof(dto.NewUsername)] = new[] { "New username is required." }
-        }));
+            return ValidationProblem(
+                new ValidationProblemDetails(
+                    new Dictionary<string, string[]>
+                    {
+                        [nameof(dto.NewUsername)] = new[] { "New username is required." }
+                    }
+                )
+            );
+        }
+
+        var newName = dto.NewUsername.Trim();
+
+        // Enforce same 8-char rule as registration
+        if (newName.Length > 8)
+        {
+            return ValidationProblem(
+                new ValidationProblemDetails(
+                    new Dictionary<string, string[]>
+                    {
+                        [nameof(dto.NewUsername)] = new[] { "Username cannot be longer than 8 characters." }
+                    }
+                )
+            );
+        }
 
         var user = await _userManager.GetUserAsync(User);
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
         // Check if username is available
-        var existing = await _userManager.FindByNameAsync(dto.NewUsername.Trim());
-        if (existing is not null)
+        var existing = await _userManager.FindByNameAsync(newName);
+        if (existing is not null && existing.Id != user.Id)
+        {
             return Conflict(new { message = "Username already taken." });
+        }
 
-        user.UserName = dto.NewUsername.Trim();
+        user.UserName = newName;
+
         var result = await _userManager.UpdateAsync(user);
-
         if (!result.Succeeded)
         {
             foreach (var err in result.Errors)
+            {
                 ModelState.AddModelError(err.Code, err.Description);
+            }
+
             return ValidationProblem(ModelState);
         }
 
-        // Refresh sign-in to update cookie
+        // Refresh sign-in to update auth cookie with new username
         await _signInManager.RefreshSignInAsync(user);
+
+        // 204, no body needed
         return NoContent();
-        // Returns 204 No Content
     }
 
     // PUT /api/user/password
-    // Change the current user's password. Requires current password.
+    // Change current user's password. Requires current password.
     [HttpPut("password")]
     [Authorize]
-    public async Task<IActionResult> UpdatePassword([FromBody] UpdatePasswordDto dto, CancellationToken ct)
+    public async Task<IActionResult> UpdatePassword(
+        [FromBody] UpdatePasswordDto dto,
+        CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+        if (string.IsNullOrWhiteSpace(dto.CurrentPassword) ||
+            string.IsNullOrWhiteSpace(dto.NewPassword))
+        {
             return ValidationProblem(
                 new ValidationProblemDetails(
                     new Dictionary<string, string[]>
@@ -186,73 +287,107 @@ public class UserController : ControllerBase
                     }
                 )
             );
-
+        }
 
         var user = await _userManager.GetUserAsync(User);
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
 
         var result = await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
         if (!result.Succeeded)
         {
             foreach (var err in result.Errors)
+            {
                 ModelState.AddModelError(err.Code, err.Description);
+            }
+
             return ValidationProblem(ModelState);
         }
 
-        await _signInManager.RefreshSignInAsync(user); // keep the user signed in
+        // Keep user logged in with new password
+        await _signInManager.RefreshSignInAsync(user);
         return NoContent();
-        // Returns 204 No Content
     }
 
     // DELETE /api/user
     // Deletes the current user's account (asks for password confirmation).
     [HttpDelete]
     [Authorize]
-    public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto dto, CancellationToken ct)
+    public async Task<IActionResult> DeleteAccount(
+        [FromBody] DeleteAccountDto dto,
+        CancellationToken ct)
     {
         var user = await _userManager.GetUserAsync(User);
-        if (user is null) return Unauthorized();
-
-        // Verify password before delete
-        if (!await _userManager.CheckPasswordAsync(user, dto.CurrentPassword))
+        if (user is null)
+        {
             return Unauthorized();
+        }
+
+        // Verify password before deleting account
+        var passwordOk = await _userManager.CheckPasswordAsync(user, dto.CurrentPassword);
+        if (!passwordOk)
+        {
+            return Unauthorized();
+        }
 
         var result = await _userManager.DeleteAsync(user);
         if (!result.Succeeded)
         {
             foreach (var err in result.Errors)
+            {
                 ModelState.AddModelError(err.Code, err.Description);
+            }
+
             return ValidationProblem(ModelState);
         }
 
         await _signInManager.SignOutAsync();
         return NoContent();
     }
-    
 
-    // UTILITY METHODS
+    // =========================================================
+    // UTILITY ENDPOINTS
+    // =========================================================
 
     // GET /api/user/check-username?username=alice
-    // Quick availability check for UI.
+    // Quick availability check for UI when user picks a username.
     [HttpGet("check-username")]
     [AllowAnonymous]
-    public async Task<IActionResult> CheckUsername([FromQuery] string username, CancellationToken ct)
+    public async Task<IActionResult> CheckUsername(
+        [FromQuery] string username,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(username))
+        {
             return BadRequest(new { message = "username is required." });
+        }
 
-        var user = await _userManager.FindByNameAsync(username.Trim());
+        var trimmed = username.Trim();
+
+        // Enforce the same 8-character rule here as well
+        if (trimmed.Length > 8)
+        {
+            return BadRequest(new { message = "Username cannot be longer than 8 characters." });
+        }
+
+        var user = await _userManager.FindByNameAsync(trimmed);
         return Ok(new { available = user is null });
     }
 
-    // (Optional) POST /api/user/refresh
-    // Re-issues the auth cookie to extend session
+    // POST /api/user/refresh
+    // Re-issues the auth cookie to extend session.
     [HttpPost("refresh")]
     [Authorize]
     public async Task<IActionResult> Refresh(CancellationToken ct)
     {
         var user = await _userManager.GetUserAsync(User);
-        if (user is null) return Unauthorized();
+        if (user is null)
+        {
+            return Unauthorized();
+        }
+
         await _signInManager.RefreshSignInAsync(user);
         return NoContent();
     }

@@ -1,34 +1,52 @@
-// layout/NavMenu.tsx
-// ----------------------
-// This component renders the top navigation bar of the application.
-// It is displayed on all pages (because App.tsx renders it outside <Routes>).
+// src/layout/NavMenu.tsx
+// ----------------------------------------------------
+// Global navigation bar for the app.
+// Hidden on quiz "take" and "result" pages.
+// Shows username (max 8 chars) when logged in.
+// ----------------------------------------------------
 
 import React from "react";
-import { Link, NavLink } from "react-router-dom";
-import AuthSection from "../auth/AuthSection";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/UseAuth";
+
+// SUPER SIMPLE: hide nav on any route that is a quiz-take or quiz-result.
+// We assume only quiz-pages use "/take" or "/result" in the path.
+function shouldHideNav(pathname: string): boolean {
+  if (pathname.includes("/take")) return true;
+  if (pathname.includes("/result")) return true;
+  return false;
+}
 
 const NavMenu: React.FC = () => {
-  return (
-    // <header> + <nav> are semantic HTML elements for navigation.
-    <header className="nav-header">
-      <nav className="nav-container">
-        {/* Left side: application "logo" or title.
-            Clicking this navigates to the home page ("/"). */}
-        <div className="nav-left">
-          <Link to="/" className="nav-brand">
-            Quiz Web
-          </Link>
-        </div>
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
 
-        {/* Right side: main navigation links + authentication section. */}
-        <div className="nav-right">
-          {/* 
-            NavLink is like Link but can automatically add an "active" CSS class
-            when the current URL matches the link's "to" property.
-          */}
+  // Hide navbar completely on quiz take/result
+  if (shouldHideNav(location.pathname)) {
+    return null;
+  }
+
+  // Display name in navbar:
+  // 1) Prefer user.userName from JWT (max 8 chars)
+  // 2) Fallback: first part of email (before "@"), max 8 chars
+  // 3) Fallback: "User"
+  const displayName =
+    user?.userName?.slice(0, 8) ||
+    (user?.email ? user.email.split("@")[0].slice(0, 8) : "User");
+
+  return (
+    <header className="nav-header">
+      <div className="nav-container">
+        {/* Left: brand/logo */}
+        <Link to="/" className="nav-brand">
+          Student Quiz
+        </Link>
+
+        {/* Right: navigation links */}
+        <nav className="nav-right">
+          {/* Home */}
           <NavLink
             to="/"
-            end
             className={({ isActive }) =>
               "nav-link" + (isActive ? " nav-link-active" : "")
             }
@@ -36,21 +54,52 @@ const NavMenu: React.FC = () => {
             Home
           </NavLink>
 
-          {/* Placeholder for the quiz list route.
-              For now it will lead to 404 until we add QuizListPage. */}
+          {/* New quiz */}
           <NavLink
-            to="/quizzes"
+            to="/quizzes/create"
             className={({ isActive }) =>
               "nav-link" + (isActive ? " nav-link-active" : "")
             }
           >
-            Quizzes
+            New quiz
           </NavLink>
 
-          {/* Authentication UI (Login/Register or Welcome + Logout). */}
-          <AuthSection />
-        </div>
-      </nav>
+          {/* Logged-out links */}
+          {!isLoading && !user && (
+            <>
+              <NavLink
+                to="/login"
+                className={({ isActive }) =>
+                  "nav-link" + (isActive ? " nav-link-active" : "")
+                }
+              >
+                Login
+              </NavLink>
+
+              <NavLink
+                to="/register"
+                className={({ isActive }) =>
+                  "nav-link" + (isActive ? " nav-link-active" : "")
+                }
+              >
+                Register
+              </NavLink>
+            </>
+          )}
+
+          {/* Logged-in: show username as link to profile */}
+          {!isLoading && user && (
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                "nav-link" + (isActive ? " nav-link-active" : "")
+              }
+            >
+              {displayName}
+            </NavLink>
+          )}
+        </nav>
+      </div>
     </header>
   );
 };

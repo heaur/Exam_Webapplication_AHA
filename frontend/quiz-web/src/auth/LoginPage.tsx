@@ -4,7 +4,7 @@
 
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "./UseAuth";
 
 const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -19,10 +19,9 @@ const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      await login({ username, password });
-      navigate("/");
+      await login({ username, password });  // <- kaster ved feil
+      navigate("/");                        // <- kjøres KUN hvis login() IKKE kastet
     } catch (err: unknown) {
-      // Narrow "unknown" to an Error if possible, otherwise show a generic message.
       if (err instanceof Error) {
         setError(err.message || "Login failed.");
       } else {

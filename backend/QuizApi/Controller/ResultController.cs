@@ -1,101 +1,102 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using QuizApi.DAL;
-using QuizApi.Domain;
 using QuizApi.DTOs;
 using System.Security.Claims;
+using System.Linq;
 
 namespace QuizApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-
-    // CONTROLLER
+    [Authorize]
     public class ResultController : ControllerBase
     {
-        private readonly ILogger<ResultController> _logger;
         private readonly QuizDbContext _db;
 
-        // CONSTRUCTOR
-        public ResultController(QuizDbContext db, ILogger<ResultController> logger)
+        public ResultController(QuizDbContext db)
         {
             _db = db;
-            _logger = logger;
         }
 
-        // RESULTS METHODS
-
-        // POST /api/quiz/{quizId}/results  [Authorize]
-        // Submit/add result. User has to be logged in.
-        [HttpPost("{quizId:int}/results")]
-        [Authorize]
-        public async Task<ActionResult<ResultReadDto>> SubmitResult(int quizId, [FromBody] ResultCreateDto dto, CancellationToken ct)
+        // GET: /api/Result/{resultId}/full
+        // Fullt resultat: summary + quiz-struktur + alle answers
+        [HttpGet("{resultId:int}/full")]
+        public async Task<ActionResult<FullResultDto>> GetFullResult(
+            int resultId,
+            CancellationToken ct)
         {
-            if (dto.QuizId != quizId)
-            {
-                ModelState.AddModelError("QuizId", "QuizId must match the route quizId.");
-                return ValidationProblem(ModelState);
-            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            if (dto.TotalQuestions < 1)
-            {
-                ModelState.AddModelError("TotalQuestions", "TotalQuestions must be at least 1.");
-                return ValidationProblem(ModelState);
-            }
-            if (dto.CorrectCount < 0 || dto.CorrectCount > dto.TotalQuestions)
-            {
-                ModelState.AddModelError("CorrectCount", "CorrectCount must be between 0 and TotalQuestions.");
-                return ValidationProblem(ModelState);
-            }
+            var result = await _db.Results
+                .Include(r => r.Quiz)
+                    .ThenInclude(q => q.Questions)
+                        .ThenInclude(q => q.Options)
+                .Include(r => r.Answers)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.ResultId == resultId && r.UserId == userId, ct);
 
-            var exists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
-            if (!exists) return NotFound();
+            if (result is null) return NotFound();
 
-            var result = new Result
+            // 1) Map summary-delen
+            var resultDto = new ResultReadDto(
+                ResultId:       result.ResultId,
+                UserId:         result.UserId,
+                QuizId:         result.QuizId,
+                QuizTitle:      result.Quiz?.Title ?? string.Empty,
+                SubjectCode:    result.Quiz?.SubjectCode ?? string.Empty,
+                CorrectCount:   result.CorrectCount,
+                TotalQuestions: result.TotalQuestions,
+                CompletedAt:    result.CompletedAt,
+                Percentage:     result.Percentage
+            );
+
+            // 2) Map quiz-delen til samme TakeQuizDto som /api/quiz/{id}/take
+            var quizEntity = result.Quiz!;
+
+            var quizDto = new TakeQuizDto
             {
-                UserId = dto.UserId,
-                QuizId = dto.QuizId,
-                CorrectCount = dto.CorrectCount,
-                TotalQuestions = dto.TotalQuestions,
-                CompletedAt = DateTime.UtcNow
+                Id          = quizEntity.QuizId,
+                SubjectCode = quizEntity.SubjectCode ?? string.Empty,
+                Title       = quizEntity.Title,
+                Description = quizEntity.Description ?? string.Empty,
+                ImageUrl    = quizEntity.ImageUrl ?? string.Empty,
+                IsPublished = quizEntity.IsPublished,
+                Questions   = quizEntity.Questions
+                    .OrderBy(q => q.QuestionId)
+                    .Select(q => new TakeQuestionDto
+                    {
+                        Id       = q.QuestionId,
+                        Text     = q.Text,
+                        ImageUrl = null,   // sett til q.ImageUrl hvis du begynner å bruke det
+                        Points   = 1,
+                        Options  = q.Options
+                            .OrderBy(o => o.OptionID)
+                            .Select(o => new TakeOptionDto
+                            {
+                                Id        = o.OptionID,
+                                Text      = o.Text,
+                                IsCorrect = o.IsCorrect
+                            })
+                            .ToList()
+                    })
+                    .ToList()
             };
 
-            _db.Results.Add(result);
-            await _db.SaveChangesAsync(ct);
+            // 3) Map answers: questionId -> optionId
+            var answersDict = result.Answers
+                .ToDictionary(a => a.QuestionId, a => a.OptionId);
 
-            var read = new ResultReadDto(
-                result.ResultId,
-                result.UserId,
-                result.QuizId,
-                result.CorrectCount,
-                result.TotalQuestions,
-                result.CompletedAt,
-                result.Percentage);
+            var fullDto = new FullResultDto
+            {
+                Result  = resultDto,
+                Quiz    = quizDto,
+                Answers = answersDict
+            };
 
-            return CreatedAtAction(nameof(GetResult), new { quizId, resultId = result.ResultId }, read);
-            // Returns 201 Created with the created result
-        }
-
-        // GET /api/quiz/{quizId}/results/{resultId}  [Authorize]
-        // Read/get result. User has to be logged in.
-        [HttpGet("{quizId:int}/results/{resultId:int}")]
-        [Authorize]
-        public async Task<ActionResult<ResultReadDto>> GetResult(int quizId, int resultId, CancellationToken ct)
-        {
-            var r = await _db.Results.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.ResultId == resultId && x.QuizId == quizId, ct);
-
-            if (r is null) return NotFound();
-
-            var read = new ResultReadDto(
-                r.ResultId, r.UserId, r.QuizId,
-                r.CorrectCount, r.TotalQuestions,
-                r.CompletedAt, r.Percentage);
-
-            return Ok(read);
-            // Returns 200 OK with the result
+            return Ok(fullDto);
         }
     }
 }

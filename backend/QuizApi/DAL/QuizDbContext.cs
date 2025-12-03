@@ -13,10 +13,12 @@ namespace QuizApi.DAL
         public DbSet<Question> Questions { get; set; } = default!;
         public DbSet<Option> Options { get; set; } = default!;
         public DbSet<Result> Results { get; set; } = default!;
+        public DbSet<ResultAnswer> ResultAnswers { get; set; } = default!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
             // Quiz
             modelBuilder.Entity<Quiz>(entity =>
             {
@@ -33,7 +35,7 @@ namespace QuizApi.DAL
                 entity.HasOne(q => q.Owner)
                       .WithMany(u => u.Creations)
                       .HasForeignKey(q => q.OwnerId)
-                      .OnDelete(DeleteBehavior.Restrict); 
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Question
@@ -50,8 +52,6 @@ namespace QuizApi.DAL
                       .WithMany(z => z.Questions)
                       .HasForeignKey(q => q.QuizId)
                       .OnDelete(DeleteBehavior.Cascade);
-
-                
             });
 
             // Option
@@ -95,12 +95,31 @@ namespace QuizApi.DAL
 
                 // Result (many) -> (1) Quiz
                 entity.HasOne(r => r.Quiz)
-                      .WithMany() 
+                      .WithMany() // evt. .WithMany(q => q.Results) hvis du legger til collection i Quiz
                       .HasForeignKey(r => r.QuizId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ResultAnswer
+            modelBuilder.Entity<ResultAnswer>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+
+                entity.HasOne(a => a.Result)
+                      .WithMany(r => r.Answers)
+                      .HasForeignKey(a => a.ResultId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.Question)
+                      .WithMany()
+                      .HasForeignKey(a => a.QuestionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(a => a.Option)
+                      .WithMany()
+                      .HasForeignKey(a => a.OptionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+        }
     }
 }
-}
-

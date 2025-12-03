@@ -28,22 +28,32 @@ namespace QuizApi.Application.Services
         }
 
         // CREATE
+        // Creates a new quiz from the incoming DTO and returns a read model.
         public async Task<QuizReadDto> CreateAsync(QuizCreateDto dto, CancellationToken ct = default)
         {
             if (dto is null) throw new ArgumentNullException(nameof(dto));
-            if (string.IsNullOrWhiteSpace(dto.Title)) throw new ArgumentException("Title cannot be empty", nameof(dto.Title));
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                throw new ArgumentException("Title cannot be empty", nameof(dto.Title));
+
+            // Normalize subject code so grouping on the homepage is consistent.
+            // If missing, we fall back to "OTHER".
+            var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
+                ? "OTHER"
+                : dto.SubjectCode.Trim().ToUpper();
 
             var now = DateTime.UtcNow;
 
             var entity = new Quiz
             {
                 Title       = dto.Title.Trim(),
+                SubjectCode = subjectCode,
                 Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim(),
+                ImageUrl    = string.IsNullOrWhiteSpace(dto.ImageUrl) ? null : dto.ImageUrl.Trim(),
                 CreatedAt   = now,
                 UpdatedAt   = null,
                 IsPublished = false,
-                PublishedAt = null,
-                // OwnerId   = null // set if you track an owner
+                PublishedAt = null
+                // OwnerId can be set higher up in the stack if you want to track owners here as well.
             };
 
             await _quizzes.AddAsync(entity, ct);
@@ -54,7 +64,7 @@ namespace QuizApi.Application.Services
             return ToDto(entity);
         }
 
-        // READ single object by id
+        // READ: single quiz by id
         public async Task<QuizReadDto?> GetByIdAsync(int quizId, CancellationToken ct = default)
         {
             if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
@@ -63,7 +73,8 @@ namespace QuizApi.Application.Services
             return entity is null ? null : ToDto(entity);
         }
 
-        // LIST with pagination and optional filters
+        // LIST: with pagination and optional filters
+        // Used by any consumer that needs a paged list of quizzes (e.g. admin views).
         public async Task<IReadOnlyList<QuizReadDto>> ListAsync(
             int page = 1,
             int pageSize = 20,
@@ -79,7 +90,9 @@ namespace QuizApi.Application.Services
             var query = all.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
-                query = query.Where(q => q.Title != null && q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+                query = query.Where(q =>
+                    q.Title != null &&
+                    q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
 
             if (!string.IsNullOrWhiteSpace(ownerId))
                 query = query.Where(q => q.OwnerId != null && q.OwnerId == ownerId);
@@ -97,6 +110,7 @@ namespace QuizApi.Application.Services
             return items;
         }
 
+        // COUNT: useful for paging metadata
         public async Task<int> CountAsync(
             string? search = null,
             string? ownerId = null,
@@ -107,7 +121,9 @@ namespace QuizApi.Application.Services
             var query = all.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
-                query = query.Where(q => q.Title != null && q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
+                query = query.Where(q =>
+                    q.Title != null &&
+                    q.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase));
 
             if (!string.IsNullOrWhiteSpace(ownerId))
                 query = query.Where(q => q.OwnerId != null && q.OwnerId == ownerId);
@@ -118,18 +134,26 @@ namespace QuizApi.Application.Services
             return query.Count();
         }
 
-        // UPDATE 
+        // UPDATE
+        // Updates quiz metadata and returns the updated read model.
         public async Task<QuizReadDto?> UpdateAsync(int quizId, QuizUpdateDto dto, CancellationToken ct = default)
         {
             if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
             if (dto is null) throw new ArgumentNullException(nameof(dto));
-            if (string.IsNullOrWhiteSpace(dto.Title)) throw new ArgumentException("Title cannot be empty", nameof(dto.Title));
+            if (string.IsNullOrWhiteSpace(dto.Title))
+                throw new ArgumentException("Title cannot be empty", nameof(dto.Title));
 
             var entity = await _quizzes.GetByIdAsync(quizId, ct);
             if (entity is null) return null;
 
+            var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
+                ? "OTHER"
+                : dto.SubjectCode.Trim().ToUpper();
+
             entity.Title       = dto.Title.Trim();
+            entity.SubjectCode = subjectCode;
             entity.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description.Trim();
+            entity.ImageUrl    = string.IsNullOrWhiteSpace(dto.ImageUrl) ? null : dto.ImageUrl.Trim();
 
             if (dto.IsPublished is not null && entity.IsPublished != dto.IsPublished.Value)
             {
@@ -146,7 +170,7 @@ namespace QuizApi.Application.Services
             return ToDto(entity);
         }
 
-        // PUBLISH / UNPUBLISH
+        // PUBLISH
         public async Task<bool> PublishAsync(int quizId, CancellationToken ct = default)
         {
             if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
@@ -167,6 +191,7 @@ namespace QuizApi.Application.Services
             return true;
         }
 
+        // UNPUBLISH
         public async Task<bool> UnpublishAsync(int quizId, CancellationToken ct = default)
         {
             if (quizId <= 0) throw new ArgumentException("Invalid quiz id", nameof(quizId));
@@ -202,7 +227,8 @@ namespace QuizApi.Application.Services
             return true;
         }
 
-        // --- Mapping helper ---
+        // Mapping helper: converts a Quiz entity into a QuizReadDto.
+        // This is used from multiple places (create, update, list, get).
         private static QuizReadDto ToDto(Quiz q)
         {
             int questionCount = q.Questions?.Count ?? 0;
@@ -210,7 +236,9 @@ namespace QuizApi.Application.Services
             return new QuizReadDto(
                 q.QuizId,
                 q.Title,
+                q.SubjectCode,
                 q.Description,
+                q.ImageUrl,
                 q.CreatedAt,
                 q.UpdatedAt,
                 q.IsPublished,

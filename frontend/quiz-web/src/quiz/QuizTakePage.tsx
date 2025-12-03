@@ -1,57 +1,51 @@
 // src/quiz/QuizTakePage.tsx
 // --------------------------
-// Full quiz-taking page.
-// - Loads a quiz from the API
-// - Lets the user select answers (supports multiple correct options)
-// - Calculates score on the client side
-// - Shows a simple result summary
+// Page for taking a quiz.
 
 import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { getQuiz } from "./QuizService";
-import type { Quiz } from "../types/quiz";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { getQuiz, submitResult, type AnswerMap } from "./QuizService";
+import type { Quiz, Question, Option, QuizResult } from "../types/quiz";
+import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
 
-type AnswerMap = Record<number, number[]>; 
-// questionId -> array of selected answerOptionIds
-
 const QuizTakePage: React.FC = () => {
   const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  // Data + loading/error state
   const [quiz, setQuiz] = useState<Quiz | null>(null);
+  const [answers, setAnswers] = useState<AnswerMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // User's selected answers
-  const [answers, setAnswers] = useState<AnswerMap>({});
-  const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [maxScore, setMaxScore] = useState(0);
-
-  // For navigating between questions
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  // Load quiz on mount / when id changes
+  // ------------------------------------------------------
+  // Load quiz from backend
+  // ------------------------------------------------------
   useEffect(() => {
     async function load() {
       if (!id) {
-        setError("Invalid quiz ID.");
+        setError("Invalid quiz id.");
         setLoading(false);
         return;
       }
 
       try {
+        setLoading(true);
+        setError(null);
+
         const q = await getQuiz(Number(id));
         setQuiz(q);
 
-        // Precompute max possible score
-        const totalPoints = q.questions.reduce(
-          (sum, question) => sum + question.points,
-          0
-        );
-        setMaxScore(totalPoints);
+        // Initialise the answer map: one entry per question id
+        const initialAnswers: AnswerMap = {};
+        for (const question of q.questions) {
+          if (question.id != null) {
+            initialAnswers[question.id] = null;
+          }
+        }
+        setAnswers(initialAnswers);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message || "Failed to load quiz.");
@@ -66,242 +60,218 @@ const QuizTakePage: React.FC = () => {
     void load();
   }, [id]);
 
-  /**
-   * Toggles a given answer option for a question.
-   * Supports multiple correct answers (checkbox-style).
-   */
-  function toggleAnswer(questionId: number, optionId: number) {
-    if (submitted) return; // Do not allow changes after submitting
-
-    setAnswers((prev) => {
-      const current = prev[questionId] ?? [];
-      const exists = current.includes(optionId);
-
-      let next: number[];
-      if (exists) {
-        next = current.filter((id) => id !== optionId);
-      } else {
-        next = [...current, optionId];
-      }
-
-      return {
-        ...prev,
-        [questionId]: next,
-      };
-    });
+  // ------------------------------------------------------
+  // Auth guard
+  // ------------------------------------------------------
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  /**
-   * Calculates the score based on the selected answers and the quiz definition.
-   * A question is counted as correct only if:
-   * - The set of selected option IDs is exactly equal to the set of correct option IDs.
-   */
-  function calculateScore(currentQuiz: Quiz, currentAnswers: AnswerMap): number {
-    let total = 0;
+  // ------------------------------------------------------
+  // Handlers
+  // ------------------------------------------------------
+  function handleExit() {
+    navigate("/");
+  }
 
-    for (const question of currentQuiz.questions) {
-      const questionId = question.id;
-      if (questionId == null) continue; // Safety check
+  function handleSelectOption(questionId: number, optionIndex: number) {
+    // Update selected option index for one question
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionIndex,
+    }));
+  }
 
-      const selected = currentAnswers[questionId] ?? [];
+  // ------------------------------------------------------
+  // Submit quiz: send to backend + navigate to result page
+  // ------------------------------------------------------
+  async function handleSubmitQuiz() {
+    if (!quiz || !quiz.id) return;
 
-      const correctIds = question.options
-        .filter((opt) => opt.isCorrect)
-        .map((opt) => opt.id)
-        .filter((id): id is number => id !== undefined);
+    const questionList: Question[] = quiz.questions ?? [];
 
-      // If IDs are missing from backend, skip scoring for that question
-      if (correctIds.length === 0) continue;
+    let correctCount = 0;
+    let totalQuestions = 0;
+    let score = 0; // currently only kept locally
+    let maxScore = 0; // sum of question points
 
-      const selectedSet = new Set(selected);
-      const correctSet = new Set(correctIds);
+    // Answers payload for backend: questionId -> optionId (DB id)
+    const answersForApi: Record<number, number> = {};
 
-      const sameSize = selectedSet.size === correctSet.size;
-      const allMatch = correctIds.every((id) => selectedSet.has(id));
+    for (const question of questionList) {
+      const qId = question.id;
+      if (qId == null) continue;
 
-      if (sameSize && allMatch) {
-        total += question.points;
+      totalQuestions += 1;
+      maxScore += question.points;
+
+      const chosenIndex = answers[qId];
+      const correctIndex = question.options.findIndex(
+        (opt: Option) => opt.isCorrect
+      );
+
+      // Map chosen *index* -> OptionId for backend
+      if (chosenIndex != null) {
+        const chosenOption = question.options[chosenIndex];
+        if (chosenOption && chosenOption.id != null) {
+          answersForApi[qId] = chosenOption.id;
+        }
+      }
+
+      // Local scoring logic
+      if (chosenIndex != null && chosenIndex === correctIndex) {
+        correctCount += 1;
+        score += question.points;
       }
     }
 
-    return total;
+    // 1) Persist result in backend (summary + per-question answers)
+    try {
+      await submitResult(quiz.id, {
+        quizId: quiz.id,
+        correctCount,
+        totalQuestions,
+        answers: answersForApi,
+      });
+    } catch (err) {
+      console.error("Failed to submit quiz result", err);
+      alert("Failed to submit quiz result. Please try again.");
+      return;
+    }
+
+    // 2) Build local QuizResult object – same shape as getMyResults()
+    //    Backend will have its own ResultId, so we just use 0 here.
+    const result: QuizResult = {
+      resultId: 0,
+      userId: undefined,
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      subjectCode: quiz.subjectCode,
+      correctCount,
+      totalQuestions,
+      completedAt: new Date().toISOString(),
+      percentage:
+        totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0,
+    };
+
+    // 3) Navigate to result page with everything needed for immediate view:
+    //    - result: summary block
+    //    - quiz + answers + score/maxScore: question cards with styling
+    navigate(`/quizzes/${quiz.id}/result`, {
+      state: {
+        result,
+        quiz,
+        answers,
+        score,
+        maxScore,
+      },
+    });
   }
 
-  function handleSubmit() {
-    if (!quiz) return;
-
-    const s = calculateScore(quiz, answers);
-    setScore(s);
-    setSubmitted(true);
-  }
-
-  function handleRestart() {
-    setAnswers({});
-    setSubmitted(false);
-    setScore(0);
-    setCurrentIndex(0);
-  }
-
+  // ------------------------------------------------------
+  // Render: loading / error / quiz
+  // ------------------------------------------------------
   if (loading) {
     return (
       <section className="page page-quiz-take">
-        <h1 className="page-title">Take Quiz</h1>
+        <div className="quiz-top-bar">
+          <button
+            type="button"
+            className="quiz-exit-btn"
+            onClick={handleExit}
+          >
+            ×
+          </button>
+        </div>
         <Loader />
       </section>
     );
   }
 
   if (error || !quiz) {
-    const message = error ?? "Quiz not found.";
-
     return (
       <section className="page page-quiz-take">
-        <h1 className="page-title">Take Quiz</h1>
-        <ErrorAlert message={message} />
-        <Link to="/quizzes" className="btn btn-secondary">
-          Back to quizzes
-        </Link>
+        <div className="quiz-top-bar">
+          <button
+            type="button"
+            className="quiz-exit-btn"
+            onClick={handleExit}
+          >
+            ×
+          </button>
+        </div>
+        <ErrorAlert message={error ?? "Quiz not found."} />
       </section>
     );
   }
 
-  const questions = quiz.questions;
-  const currentQuestion = questions[currentIndex];
-  const totalQuestions = questions.length;
-
-  const currentSelectedIds: number[] =
-    currentQuestion.id !== undefined && answers[currentQuestion.id]
-      ? answers[currentQuestion.id]!
-      : [];
+  const questionList: Question[] = quiz.questions ?? [];
 
   return (
     <section className="page page-quiz-take">
-      <h1 className="page-title">{quiz.title}</h1>
-
-      {quiz.description && <p className="quiz-description">{quiz.description}</p>}
-
-      {/* Result summary after submission */}
-      {submitted && (
-        <div className="quiz-result">
-          <p>
-            You scored <strong>{score}</strong> out of{" "}
-            <strong>{maxScore}</strong> points.
-          </p>
-          <p>
-            Questions answered:{" "}
-            <strong>
-              {
-                Object.keys(answers).filter((qid) => answers[Number(qid)]?.length > 0)
-                  .length
-              }
-            </strong>{" "}
-            / <strong>{totalQuestions}</strong>
-          </p>
+      <div className="quiz-top-bar">
+        <div className="quiz-header-info">
+          <p className="quiz-subject">{quiz.subjectCode}</p>
+          <h1 className="page-title">{quiz.title}</h1>
         </div>
-      )}
+        <button
+          type="button"
+          className="quiz-exit-btn"
+          onClick={handleExit}
+        >
+          ×
+        </button>
+      </div>
 
-      {/* Only show questions if there are any */}
-      {currentQuestion ? (
-        <div className="quiz-question-card">
-          <div className="quiz-question-header">
+      {questionList.map((question, index) => {
+        const qId = question.id;
+        if (qId == null) return null;
+
+        const selectedIndex = answers[qId];
+
+        return (
+          <div key={qId} className="quiz-question-card">
             <p className="quiz-question-index">
-              Question {currentIndex + 1} of {totalQuestions}
+              Question {index + 1} • {question.points} point
+              {question.points !== 1 ? "s" : ""}
             </p>
-            <p className="quiz-question-points">
-              {currentQuestion.points} point
-              {currentQuestion.points !== 1 ? "s" : ""}
-            </p>
-          </div>
 
-          <h2 className="quiz-question-text">{currentQuestion.text}</h2>
+            <h2 className="quiz-question-text">{question.text}</h2>
 
-          <ul className="quiz-options-list">
-            {currentQuestion.options.map((option) => {
-              if (option.id == null) return null; // Safety
+            {question.imageUrl && (
+              <div className="quiz-question-image">
+                <img src={question.imageUrl} alt="Question" />
+              </div>
+            )}
 
-              const checked = currentSelectedIds.includes(option.id);
-
-              // If submitted, we mark correct/incorrect for visual feedback
-              let optionClass = "quiz-option";
-              if (submitted) {
-                if (option.isCorrect) optionClass += " quiz-option-correct";
-                if (!option.isCorrect && checked)
-                  optionClass += " quiz-option-incorrect";
-              } else if (checked) {
-                optionClass += " quiz-option-selected";
-              }
-
-              return (
-                <li key={option.id} className={optionClass}>
+            <ul className="quiz-options-list">
+              {question.options.map((opt: Option, optIndex: number) => (
+                <li key={optIndex} className="quiz-option">
                   <label>
                     <input
-                      type="checkbox"
-                      disabled={submitted}
-                      checked={checked}
-                      onChange={() =>
-                        toggleAnswer(currentQuestion.id as number, option.id!)
-                      }
+                      type="radio"
+                      name={`q-${qId}`}
+                      checked={selectedIndex === optIndex}
+                      onChange={() => handleSelectOption(qId, optIndex)}
                     />
-                    <span>{option.text}</span>
+                    <span>{opt.text}</span>
                   </label>
                 </li>
-              );
-            })}
-          </ul>
-
-          <div className="quiz-navigation">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
-              disabled={currentIndex === 0}
-            >
-              Previous
-            </button>
-
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() =>
-                setCurrentIndex((i) =>
-                  Math.min(totalQuestions - 1, i + 1)
-                )
-              }
-              disabled={currentIndex === totalQuestions - 1}
-            >
-              Next
-            </button>
+              ))}
+            </ul>
           </div>
+        );
+      })}
 
-          <div className="quiz-actions">
-            {!submitted && (
-              <button
-                type="button"
-                className="btn btn-primary"
-                onClick={handleSubmit}
-              >
-                Submit quiz
-              </button>
-            )}
-
-            {submitted && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={handleRestart}
-              >
-                Retake quiz
-              </button>
-            )}
-
-            <Link to="/quizzes" className="btn btn-secondary">
-              Back to quizzes
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <p>No questions in this quiz.</p>
-      )}
+      <div className="quiz-actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleSubmitQuiz}
+        >
+          Submit quiz
+        </button>
+      </div>
     </section>
   );
 };

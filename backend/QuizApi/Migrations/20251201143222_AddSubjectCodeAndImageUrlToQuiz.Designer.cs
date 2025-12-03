@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using QuizApi.DAL;
 
@@ -10,9 +11,11 @@ using QuizApi.DAL;
 namespace QuizApi.Migrations
 {
     [DbContext(typeof(QuizDbContext))]
-    partial class QuizDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251201143222_AddSubjectCodeAndImageUrlToQuiz")]
+    partial class AddSubjectCodeAndImageUrlToQuiz
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.10");
@@ -337,32 +340,6 @@ namespace QuizApi.Migrations
                     b.ToTable("Results");
                 });
 
-            modelBuilder.Entity("QuizApi.Domain.ResultAnswer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("OptionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ResultId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OptionId");
-
-                    b.HasIndex("QuestionId");
-
-                    b.HasIndex("ResultId");
-
-                    b.ToTable("ResultAnswers");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -465,33 +442,6 @@ namespace QuizApi.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("QuizApi.Domain.ResultAnswer", b =>
-                {
-                    b.HasOne("QuizApi.Domain.Option", "Option")
-                        .WithMany()
-                        .HasForeignKey("OptionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QuizApi.Domain.Question", "Question")
-                        .WithMany()
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("QuizApi.Domain.Result", "Result")
-                        .WithMany("Answers")
-                        .HasForeignKey("ResultId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Option");
-
-                    b.Navigation("Question");
-
-                    b.Navigation("Result");
-                });
-
             modelBuilder.Entity("QuizApi.Domain.ApplicationUser", b =>
                 {
                     b.Navigation("Creations");
@@ -507,11 +457,6 @@ namespace QuizApi.Migrations
             modelBuilder.Entity("QuizApi.Domain.Quiz", b =>
                 {
                     b.Navigation("Questions");
-                });
-
-            modelBuilder.Entity("QuizApi.Domain.Result", b =>
-                {
-                    b.Navigation("Answers");
                 });
 #pragma warning restore 612, 618
         }

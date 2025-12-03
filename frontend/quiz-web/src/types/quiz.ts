@@ -1,126 +1,77 @@
 // src/types/quiz.ts
 // ------------------
-// Defines TypeScript interfaces for quiz-related data structures.
-// These types should mirror your backend DTOs as closely as possible,
-// so that the frontend and backend "speak the same language".
+// Shared TypeScript types for quiz data used across the frontend.
 
-/**
- * Represents a single answer option for a question.
- * Example: "Oslo", "Berlin", "Paris" etc.
- */
-export interface AnswerOption {
-  /**
-   * Optional numeric identifier for the answer option.
-   * This is usually created by the database.
-   * It can be undefined when you create a new quiz on the client.
-   */
-  id?: number;
+// ---------- QUIZ LIST / SUMMARY ----------
 
-  /**
-   * The visible text of the answer option shown to the user.
-   */
-  text: string;
-
-  /**
-   * Indicates whether this answer option is a correct answer.
-   * Some quizzes may allow multiple correct answers, others only one.
-   */
-  isCorrect: boolean;
-}
-
-/**
- * Represents a single question in a quiz.
- */
-export interface Question {
-  /**
-   * Optional numeric identifier for the question.
-   * Created by the backend/database when the quiz is saved.
-   */
-  id?: number;
-
-  /**
-   * The text of the question shown to the user.
-   * Example: "What is the capital of Norway?"
-   */
-  text: string;
-
-  /**
-   * Number of points given for a correct answer to this question.
-   * This allows you to weight some questions higher than others.
-   */
-  points: number;
-
-  /**
-   * All possible answer options for this question.
-   * At least one option should have isCorrect = true.
-   */
-  options: AnswerOption[];
-}
-
-/**
- * Represents a full quiz with all questions and answer options.
- */
-export interface Quiz {
-  /**
-   * Optional numeric identifier for the quiz.
-   * Set by the backend/database when the quiz is created.
-   */
-  id?: number;
-
-  /**
-   * Short, descriptive title of the quiz.
-   * Example: "General Knowledge", "C# Basics", "Web Development Quiz".
-   */
-  title: string;
-
-  /**
-   * Optional longer description of the quiz.
-   * Explains what the quiz is about or who it is for.
-   */
-  description?: string;
-
-  /**
-   * Indicates whether the quiz is published/visible to users.
-   * false = draft, true = visible in quiz list for normal users.
-   */
-  isPublished: boolean;
-
-  /**
-   * All questions that belong to this quiz.
-   * Can be an empty array while the quiz is being created.
-   */
-  questions: Question[];
-}
-
-/**
- * A lighter version of a quiz used for list views and overview pages.
- * Does not include the full questions and answer options.
- */
-export interface QuizSummary {
-  /**
-   * Unique identifier of the quiz.
-   */
+// Short quiz info used in lists/tables and on the homepage.
+export type QuizSummary = {
   id: number;
+  subjectCode: string;    // Course code, e.g. "ITPE3200"
+  title: string;          // Quiz title
+  description: string;    // Required description on frontend
+  imageUrl: string;       // Required cover image URL on frontend
+  questionCount: number;  // Number of questions in the quiz
+  totalPoints?: number;   // Optional total score if you calculate it
+  isPublished: boolean;   // Whether the quiz is visible to users
+};
 
-  /**
-   * Title of the quiz.
-   */
-  title: string;
+// ---------- QUESTIONS & OPTIONS ----------
 
-  /**
-   * Number of questions in the quiz.
-   * This is typically calculated on the backend.
-   */
-  questionCount: number;
+// Single answer option for a question
+export type Option = {
+  id?: number | null;     // Optional: exists only for persisted options
+  questionId?: number;
+  text: string;           // Display text for this option
+  isCorrect: boolean;     // True if this is the correct answer
+};
 
-  /**
-   * Total number of points for the quiz.
-   * Also typically calculated on the backend.
-   */
-  totalPoints: number;
+// Question with its options
+export type Question = {
+  id?: number | null;     // Optional: exists only for persisted questions
+  quizId?: number;        // FK to quiz if needed
+  text: string;           // Question text
+  imageUrl?: string;      // Optional image URL per question
+  points: number;         // Points awarded for this question
+  options: Option[];      // Answer options for this question
+};
 
-  /**
-   * Published state of the quiz.
-   */
-  isPublished: boolean;
-}
+// ---------- FULL QUIZ (CREATE / EDIT / TAKE) ----------
+
+// Full quiz type used when creating, editing and taking a quiz
+export type Quiz = {
+  id?: number;            // Optional when creating a new quiz
+  subjectCode: string;    // Course code, required on frontend
+  title: string;          // Quiz title, required
+  description: string;    // Required description
+  imageUrl: string;       // Required cover image URL
+  isPublished: boolean;   // Publication flag
+
+  createdAt?: string;         // ISO timestamp from backend
+  updatedAt?: string | null;
+  publishedAt?: string | null;
+  ownerId?: string | null;
+
+  questionCount?: number;     // Optional aggregate
+  totalPoints?: number;       // Optional aggregate
+
+  questions: Question[];      // Full list of questions for this quiz
+};
+
+// ---------- RESULTS (USED ON RESULT PAGE + MIN PROFIL) ----------
+
+// One stored result for a completed quiz.
+// Mirrors ResultReadDto in the backend.
+export type QuizResult = {
+  resultId: number;
+  userId?: string | null;
+  quizId: number;
+
+  quizTitle: string;      // Title of the quiz you took
+  subjectCode: string;    // Course code (e.g. "ITPE3200")
+
+  correctCount: number;   // Number of correct questions
+  totalQuestions: number; // Number of questions in the quiz
+  completedAt: string;    // ISO timestamp when quiz was completed
+  percentage: number;     // 0–100 (already calculated in backend)
+};
