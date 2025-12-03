@@ -22,7 +22,7 @@ namespace QuizApi.Controllers
             _db = db;
         }
 
-        // POST /api/quiz/{quizId}/questions [Authorize]
+        // POST /api/quiz/{quizId}/questions [Authorize] - add question under a quiz
         [HttpPost("{quizId:int}/questions")]
         [Authorize]
         public async Task<ActionResult<QuestionReadDto>> AddQuestion(int quizId, [FromBody] QuestionCreateDto dto, CancellationToken ct)
@@ -82,7 +82,7 @@ namespace QuizApi.Controllers
             return Ok(new QuestionReadDto(q.QuestionId, q.Text, q.QuizId));
         }
 
-        // PUT /api/quiz/{quizId}/questions/{questionId}  [Authorize]
+        // PUT /api/quiz/{quizId}/questions/{questionId}  [Authorize] - update question text
         [HttpPut("{quizId:int}/questions/{questionId:int}")]
         [Authorize]
         public async Task<IActionResult> UpdateQuestion(int quizId, int questionId, [FromBody] QuestionUpdateDto dto, CancellationToken ct)
@@ -112,7 +112,7 @@ namespace QuizApi.Controllers
             return NoContent();
         }
 
-        // DELETE /api/quiz/{quizId}/questions/{questionId}  [Authorize]
+        // DELETE /api/quiz/{quizId}/questions/{questionId}  [Authorize] - remove question
         [HttpDelete("{quizId:int}/questions/{questionId:int}")]
         [Authorize]
         public async Task<IActionResult> DeleteQuestion(int quizId, int questionId, CancellationToken ct)

@@ -235,7 +235,7 @@ export async function getMyQuizzes(): Promise<QuizSummary[]> {
 // ======================================================
 
 export async function getMyResults(): Promise<QuizResult[]> {
-  const response = await fetch(`${QUIZ_BASE_URL}/my/results`, {
+  const response = await fetch(`${RESULT_BASE_URL}/my`, {
     method: "GET",
     headers: jsonHeaders(),
     credentials: "include",
@@ -280,7 +280,7 @@ export async function submitResult(
   quizId: number,
   payload: ResultCreateApiDto
 ): Promise<void> {
-  const response = await fetch(`${QUIZ_BASE_URL}/${quizId}/results`, {
+  const response = await fetch(`${RESULT_BASE_URL}`, {
     method: "POST",
     headers: jsonHeaders(),
     credentials: "include",
