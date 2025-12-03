@@ -572,6 +572,7 @@ namespace QuizApi.Controllers
                 ModelState.AddModelError("TotalQuestions", "TotalQuestions must be at least 1.");
                 return ValidationProblem(ModelState);
             }
+
             if (dto.CorrectCount < 0 || dto.CorrectCount > dto.TotalQuestions)
             {
                 ModelState.AddModelError("CorrectCount", "CorrectCount must be between 0 and TotalQuestions.");
@@ -581,42 +582,65 @@ namespace QuizApi.Controllers
             var exists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
             if (!exists) return NotFound();
 
-            // 👇 hent innlogget bruker fra cookie/claims
+            // Hent innlogget bruker fra cookie/claims
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
             var result = new Result
             {
-                UserId        = userId,                 // bruker innlogget bruker
-                QuizId        = dto.QuizId,
-                CorrectCount  = dto.CorrectCount,
+                UserId         = userId,
+                QuizId         = dto.QuizId,
+                CorrectCount   = dto.CorrectCount,
                 TotalQuestions = dto.TotalQuestions,
-                CompletedAt   = DateTime.UtcNow
-                // Percentage er read-only i domenemodellen → IKKE sett her
+                CompletedAt    = DateTime.UtcNow
+                // Percentage er read-only (NotMapped) -> beregnes automatisk
             };
 
             _db.Results.Add(result);
-            await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct); // trenger ResultId før vi lagrer answers
+
+            // lagre alle brukerens svar (én rad per spørsmål)
+            if (dto.Answers != null && dto.Answers.Count > 0)
+            {
+                foreach (var kvp in dto.Answers)
+                {
+                    var questionId = kvp.Key;
+                    var optionId   = kvp.Value;
+
+                    var answerEntity = new ResultAnswer
+                    {
+                        ResultId   = result.ResultId,
+                        QuestionId = questionId,
+                        OptionId   = optionId
+                    };
+
+                    _db.ResultAnswers.Add(answerEntity);
+                }
+
+                await _db.SaveChangesAsync(ct);
+            }
 
             // Hent quiz for å kunne sette tittel/fagkode på DTO
             var quiz = await _db.Quizzes.AsNoTracking()
                 .FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
 
             var read = new ResultReadDto(
-                ResultId:      result.ResultId,
-                UserId:        result.UserId,
-                QuizId:        result.QuizId,
-                QuizTitle:     quiz?.Title ?? string.Empty,
-                SubjectCode:   quiz?.SubjectCode ?? string.Empty,
-                CorrectCount:  result.CorrectCount,
+                ResultId:       result.ResultId,
+                UserId:         result.UserId,
+                QuizId:         result.QuizId,
+                QuizTitle:      quiz?.Title ?? string.Empty,
+                SubjectCode:    quiz?.SubjectCode ?? string.Empty,
+                CorrectCount:   result.CorrectCount,
                 TotalQuestions: result.TotalQuestions,
-                CompletedAt:   result.CompletedAt,
-                Percentage:    result.Percentage    // read-only property fra domenemodellen
+                CompletedAt:    result.CompletedAt,
+                Percentage:     result.Percentage
             );
 
-            return CreatedAtAction(nameof(GetResult),
+            return CreatedAtAction(
+                nameof(GetResult),
                 new { quizId, resultId = result.ResultId },
-                read);
+                read
+            );
         }
 
         [HttpGet("{quizId:int}/results/{resultId:int}")]

@@ -40,5 +40,7 @@ namespace QuizApi.Domain
         public double Percentage => TotalQuestions > 0
             ? (double)CorrectCount / TotalQuestions * 100.0
             : 0.0;
+
+         public ICollection<ResultAnswer> Answers { get; set; } = new List<ResultAnswer>();
     }
 }

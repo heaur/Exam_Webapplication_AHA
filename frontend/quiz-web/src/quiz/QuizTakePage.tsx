@@ -1,56 +1,27 @@
 // src/quiz/QuizTakePage.tsx
 // --------------------------
 // Page for taking a quiz.
-//
-// Behaviour:
-// - Only authenticated users can access this page.
-// - Reads quiz id from the URL, loads quiz data from the API.
-// - Renders each question with single-choice radio buttons.
-// - Keeps selected answers in local React state.
-// - On submit:
-//    * Calculates score on the client
-//    * Sends the result to the backend (submitResult)
-//    * Navigates to a result page, passing quiz + answers + score
-//      via React Router's location state.
 
 import React, { useEffect, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { getQuiz, submitResult } from "./QuizService";
-import type { Quiz, Question, Option } from "../types/quiz";
+import { getQuiz, submitResult, type AnswerMap } from "./QuizService";
+import type { Quiz, Question, Option, QuizResult } from "../types/quiz";
 import { useAuth } from "../auth/UseAuth";
 import Loader from "../components/Loader";
 import ErrorAlert from "../components/ErrorAlert";
-
-// Simple mapping: questionId -> selected option index (0..n) or null
-type AnswerMap = Record<number, number | null>;
-
-// Narrow type describing what the backend might send for a single quiz.
-// Everything is optional because the API is not perfectly consistent.
-type RawQuizFromApi = {
-  id?: number;
-  subjectCode?: string | null;
-  title?: string | null;
-  description?: string | null;
-  imageUrl?: string | null;
-  isPublished?: boolean | null;
-  questions?: Question[] | null;
-};
 
 const QuizTakePage: React.FC = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Quiz loaded from backend (normalised to our Quiz type)
   const [quiz, setQuiz] = useState<Quiz | null>(null);
-  // Map of selected answers per question id
   const [answers, setAnswers] = useState<AnswerMap>({});
-  // Loading / error state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // ------------------------------------------------------
-  // Load quiz on mount / when id changes
+  // Load quiz from backend
   // ------------------------------------------------------
   useEffect(() => {
     async function load() {
@@ -64,33 +35,12 @@ const QuizTakePage: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Accept that backend might return a "summary" object
-        // without questions, so cast to RawQuizFromApi helper type.
-        const raw = (await getQuiz(Number(id))) as RawQuizFromApi;
-
-        // Normalise questions: always an array on the frontend.
-        const questions: Question[] = Array.isArray(raw.questions)
-          ? raw.questions
-          : [];
-
-        // Normalise into our strict Quiz type so the rest of the
-        // component can rely on a stable shape.
-        const q: Quiz = {
-          id: raw.id ?? Number(id),
-          subjectCode: raw.subjectCode ?? "",
-          title: raw.title ?? "Untitled quiz",
-          description: raw.description ?? "",
-          imageUrl: raw.imageUrl ?? "",
-          isPublished: raw.isPublished ?? false,
-          questions,
-        };
-
+        const q = await getQuiz(Number(id));
         setQuiz(q);
 
-        // Initialise answer map: one key per question id,
-        // all start as "no answer selected" (null).
+        // Initialise the answer map: one entry per question id
         const initialAnswers: AnswerMap = {};
-        for (const question of questions) {
+        for (const question of q.questions) {
           if (question.id != null) {
             initialAnswers[question.id] = null;
           }
@@ -111,43 +61,42 @@ const QuizTakePage: React.FC = () => {
   }, [id]);
 
   // ------------------------------------------------------
-  // Auth guard (after hooks)
+  // Auth guard
   // ------------------------------------------------------
   if (!user) {
-    // User is not logged in -> send to login page.
     return <Navigate to="/login" replace />;
   }
 
   // ------------------------------------------------------
-  // Event handlers
+  // Handlers
   // ------------------------------------------------------
   function handleExit() {
-    // Just go back to home page when user clicks the "X" button.
     navigate("/");
   }
 
   function handleSelectOption(questionId: number, optionIndex: number) {
-    // Store chosen option index for this question id.
+    // Update selected option index for one question
     setAnswers((prev) => ({
       ...prev,
       [questionId]: optionIndex,
     }));
   }
 
-  // Submit the quiz:
-  // 1) Compute score/maxScore for UI (using question.points)
-  // 2) Compute correctCount/totalQuestions for backend
-  // 3) Call submitResult to store the result server-side
-  // 4) Navigate to result page with all data in router state
+  // ------------------------------------------------------
+  // Submit quiz: send to backend + navigate to result page
+  // ------------------------------------------------------
   async function handleSubmitQuiz() {
-    if (!quiz) return;
+    if (!quiz || !quiz.id) return;
 
     const questionList: Question[] = quiz.questions ?? [];
 
-    let correctCount = 0;   // number of correctly answered questions
-    let totalQuestions = 0; // number of questions in the quiz
-    let score = 0;          // weighted score using question.points
-    let maxScore = 0;       // max possible score (sum of points)
+    let correctCount = 0;
+    let totalQuestions = 0;
+    let score = 0; // currently only kept locally
+    let maxScore = 0; // sum of question points
+
+    // Answers payload for backend: questionId -> optionId (DB id)
+    const answersForApi: Record<number, number> = {};
 
     for (const question of questionList) {
       const qId = question.id;
@@ -161,39 +110,66 @@ const QuizTakePage: React.FC = () => {
         (opt: Option) => opt.isCorrect
       );
 
+      // Map chosen *index* -> OptionId for backend
+      if (chosenIndex != null) {
+        const chosenOption = question.options[chosenIndex];
+        if (chosenOption && chosenOption.id != null) {
+          answersForApi[qId] = chosenOption.id;
+        }
+      }
+
+      // Local scoring logic
       if (chosenIndex != null && chosenIndex === correctIndex) {
         correctCount += 1;
         score += question.points;
       }
     }
 
+    // 1) Persist result in backend (summary + per-question answers)
     try {
-      // Persist result in backend – userId is taken from auth cookie/claims.
-      await submitResult(quiz.id!, {
-        quizId: quiz.id!,
+      await submitResult(quiz.id, {
+        quizId: quiz.id,
         correctCount,
         totalQuestions,
-      });
-
-      // Navigate to result page and pass full data in router state
-      // so that the result view does not need to re-fetch.
-      navigate(`/quizzes/${quiz.id}/result`, {
-        state: {
-          quiz,
-          answers,
-          score,
-          maxScore,
-        },
+        answers: answersForApi,
       });
     } catch (err) {
-      // If the POST fails, we keep the user on this page so they can retry.
       console.error("Failed to submit quiz result", err);
       alert("Failed to submit quiz result. Please try again.");
+      return;
     }
+
+    // 2) Build local QuizResult object – same shape as getMyResults()
+    //    Backend will have its own ResultId, so we just use 0 here.
+    const result: QuizResult = {
+      resultId: 0,
+      userId: undefined,
+      quizId: quiz.id,
+      quizTitle: quiz.title,
+      subjectCode: quiz.subjectCode,
+      correctCount,
+      totalQuestions,
+      completedAt: new Date().toISOString(),
+      percentage:
+        totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0,
+    };
+
+    // 3) Navigate to result page with everything needed for immediate view:
+    //    - result: summary block
+    //    - quiz + answers + score/maxScore: question cards with styling
+    navigate(`/quizzes/${quiz.id}/result`, {
+      state: {
+        result,
+        quiz,
+        answers,
+        score,
+        maxScore,
+      },
+    });
   }
 
   // ------------------------------------------------------
-  // Render: loading state
+  // Render: loading / error / quiz
   // ------------------------------------------------------
   if (loading) {
     return (
@@ -212,9 +188,6 @@ const QuizTakePage: React.FC = () => {
     );
   }
 
-  // ------------------------------------------------------
-  // Render: error state
-  // ------------------------------------------------------
   if (error || !quiz) {
     return (
       <section className="page page-quiz-take">
@@ -232,15 +205,10 @@ const QuizTakePage: React.FC = () => {
     );
   }
 
-  // At this point TypeScript knows quiz is a proper Quiz object.
   const questionList: Question[] = quiz.questions ?? [];
 
-  // ------------------------------------------------------
-  // Render: quiz content
-  // ------------------------------------------------------
   return (
     <section className="page page-quiz-take">
-      {/* Top bar with subject + title on the left, exit button on the right */}
       <div className="quiz-top-bar">
         <div className="quiz-header-info">
           <p className="quiz-subject">{quiz.subjectCode}</p>
@@ -255,7 +223,6 @@ const QuizTakePage: React.FC = () => {
         </button>
       </div>
 
-      {/* Render each question as a card */}
       {questionList.map((question, index) => {
         const qId = question.id;
         if (qId == null) return null;
@@ -264,23 +231,19 @@ const QuizTakePage: React.FC = () => {
 
         return (
           <div key={qId} className="quiz-question-card">
-            {/* Small header with question number and points */}
             <p className="quiz-question-index">
               Question {index + 1} • {question.points} point
               {question.points !== 1 ? "s" : ""}
             </p>
 
-            {/* Main question text */}
             <h2 className="quiz-question-text">{question.text}</h2>
 
-            {/* Optional image */}
             {question.imageUrl && (
               <div className="quiz-question-image">
                 <img src={question.imageUrl} alt="Question" />
               </div>
             )}
 
-            {/* Single-choice options */}
             <ul className="quiz-options-list">
               {question.options.map((opt: Option, optIndex: number) => (
                 <li key={optIndex} className="quiz-option">
@@ -300,7 +263,6 @@ const QuizTakePage: React.FC = () => {
         );
       })}
 
-      {/* Submit button at the bottom */}
       <div className="quiz-actions">
         <button
           type="button"

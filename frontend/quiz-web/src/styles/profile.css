@@ -9,9 +9,16 @@
 
 /* Wrapper inne i .app-main – ingen ekstra bakgrunn eller shadow */
 .profile-page {
-  max-width: 960px;
-  margin: 2.5rem auto 3.5rem;
-  padding: 0 1rem; /* litt luft mot kantene på små skjermer */
+  /* fyll hele høyden under navbaren */
+  min-height: 50vh;
+
+  /* sentrer profile-card i både x og y */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  /* litt luft mot kantene på små skjermer */
+  padding: 2rem 1rem;
 }
 
 /* ----------------------------------------------------------- */
@@ -21,6 +28,7 @@
 .profile-card {
   width: 100%;
   max-width: 880px;              /* slightly wider card */
+  min-width: 400px;
   margin: 0 auto;                /* center horizontally */
   padding: 2.5rem 3rem;
   border-radius: 24px;
@@ -260,4 +268,19 @@
   .profile-section-body {
     padding: 1rem 1.25rem 1.25rem;
   }
+}
+
+/* ----------------------------------------------------------- */
+/* Result On user page changes                                                */
+/* ----------------------------------------------------------- */
+/* Make result rows clickable */
+.profile-list-item--clickable {
+  cursor: pointer;
+  border-radius: 0.75rem;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.profile-list-item--clickable:hover {
+  background-color: #f3f4f6;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
 }

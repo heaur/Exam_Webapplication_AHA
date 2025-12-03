@@ -2,9 +2,10 @@
 // ----------------------------
 // "My profile" page.
 // Shows:
-// - Logged-in user (from AuthContext)
-// - Collapsible sections for user info, results, and quizzes
-// - Logout button at the bottom.
+//  - logged-in user info
+//  - your quiz results (clickable -> QuizResultPage)
+//  - your own quizzes (edit/delete)
+//  - logout button
 
 import "../styles/profile.css";
 
@@ -27,7 +28,7 @@ const ProfilePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Local UI state: which sections are expanded
+  // Which sections are open
   const [openUserInfo, setOpenUserInfo] = useState(true);
   const [openResults, setOpenResults] = useState(true);
   const [openQuizzes, setOpenQuizzes] = useState(true);
@@ -36,14 +37,11 @@ const ProfilePage: React.FC = () => {
   const [resultsFilter, setResultsFilter] = useState("");
   const [quizzesFilter, setQuizzesFilter] = useState("");
 
-  // Helper: nice display name for the header
   const displayName =
     user?.userName?.slice(0, 8) ||
     (user?.email ? user.email.split("@")[0].slice(0, 8) : "User");
 
-  // --------------------------------------------------
-  // Load data on mount
-  // --------------------------------------------------
+  // ---------------- LOAD DATA ----------------
   useEffect(() => {
     let isCancelled = false;
 
@@ -64,7 +62,6 @@ const ProfilePage: React.FC = () => {
         setResults(resultRes);
       } catch (err: unknown) {
         if (isCancelled) return;
-
         console.error("Failed to load profile data", err);
         const msg =
           err instanceof Error
@@ -85,9 +82,8 @@ const ProfilePage: React.FC = () => {
     };
   }, []);
 
-  // --------------------------------------------------
-  // Handlers
-  // --------------------------------------------------
+  // ---------------- HANDLERS ----------------
+
   async function handleDeleteQuiz(id: number) {
     const confirmed = window.confirm(
       "Are you sure you want to delete this quiz? This cannot be undone."
@@ -116,12 +112,11 @@ const ProfilePage: React.FC = () => {
   }
 
   if (!user) {
-    // Route should be protected, but guard anyway.
     navigate("/login");
     return null;
   }
 
-  // Filtered lists based on search query
+  // Filtered lists
   const filteredResults = resultsFilter
     ? results.filter((r) =>
         (r.quizTitle + " " + r.subjectCode)
@@ -138,11 +133,11 @@ const ProfilePage: React.FC = () => {
       )
     : quizzes;
 
+  // ---------------- RENDER ----------------
+
   return (
     <section className="profile-page">
-      {/* Single outer card */}
       <div className="profile-card">
-        {/* Header */}
         <header className="profile-header">
           <h1 className="page-title">My profile</h1>
           <p className="page-description">
@@ -150,10 +145,9 @@ const ProfilePage: React.FC = () => {
           </p>
         </header>
 
-        {/* Error banner, if any */}
         {error && <div className="profile-error">{error}</div>}
 
-        {/* USER INFO SECTION */}
+        {/* USER INFO */}
         <section className="profile-section">
           <button
             type="button"
@@ -168,39 +162,25 @@ const ProfilePage: React.FC = () => {
 
           {openUserInfo && (
             <div className="profile-section-body">
-              {/* Semantic definition list: label/value pairs */}
               <dl className="profile-user-info">
                 <div className="profile-user-row">
                   <dt>Username</dt>
                   <dd>{displayName}</dd>
                 </div>
-
                 <div className="profile-user-row">
                   <dt>Email</dt>
                   <dd>{user.email ?? "Not set"}</dd>
                 </div>
-
                 <div className="profile-user-row profile-user-row--password">
                   <dt>Password</dt>
-                  <dd>
-                    ********
-                    <button
-                      type="button"
-                      className="btn btn-small"
-                      onClick={() =>
-                        alert("Password change UI not implemented yet.")
-                      }
-                    >
-                      Change
-                    </button>
-                  </dd>
+                  <dd>******** (hidden for security)</dd>
                 </div>
               </dl>
             </div>
           )}
         </section>
 
-        {/* RESULTS SECTION */}
+        {/* RESULTS */}
         <section className="profile-section">
           <button
             type="button"
@@ -235,14 +215,20 @@ const ProfilePage: React.FC = () => {
 
               <ul className="profile-list">
                 {filteredResults.map((r) => (
-                  <li key={r.resultId} className="profile-list-item">
+                  <li
+                    key={r.resultId}
+                    className="profile-list-item profile-list-item--clickable"
+                    onClick={() =>
+                      navigate(`/quizzes/${r.quizId}/result`, {
+                        state: { result: r }, // VIKTIG: key MÅ hete "result"
+                      })
+                    }
+                  >
                     <div className="profile-list-main">
-                      <span className="profile-list-title">
-                        {r.quizTitle}
-                      </span>
+                      <span className="profile-list-title">{r.quizTitle}</span>
                       <span className="profile-list-meta">
-                        {r.subjectCode} • {r.correctCount}/{r.totalQuestions}{" "}
-                        correct ({Math.round(r.percentage)}%)
+                        {r.subjectCode} • {r.correctCount}/{r.totalQuestions} correct (
+                        {Math.round(r.percentage)}%)
                       </span>
                     </div>
                     <div className="profile-list-meta">
@@ -255,7 +241,7 @@ const ProfilePage: React.FC = () => {
           )}
         </section>
 
-        {/* QUIZZES SECTION */}
+        {/* QUIZZES */}
         <section className="profile-section">
           <button
             type="button"
@@ -323,7 +309,7 @@ const ProfilePage: React.FC = () => {
           )}
         </section>
 
-        {/* Logout at the very bottom, centered */}
+        {/* LOG OUT */}
         <div className="profile-footer">
           <button
             type="button"

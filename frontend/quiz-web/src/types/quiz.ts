@@ -21,6 +21,7 @@ export type QuizSummary = {
 // Single answer option for a question
 export type Option = {
   id?: number | null;     // Optional: exists only for persisted options
+  questionId?: number;
   text: string;           // Display text for this option
   isCorrect: boolean;     // True if this is the correct answer
 };

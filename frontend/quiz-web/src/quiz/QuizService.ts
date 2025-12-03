@@ -1,7 +1,7 @@
 // src/quiz/QuizService.ts
 // ------------------------
 // Centralised service for all quiz-related HTTP calls.
-// Talks to the ASP.NET Core API (QuizController).
+// Talks to the ASP.NET Core API (QuizController + ResultController).
 
 import type { Quiz, QuizSummary, Question, QuizResult } from "../types/quiz";
 
@@ -14,6 +14,7 @@ const API_URL =
   "http://localhost:5154";
 
 const QUIZ_BASE_URL = `${API_URL}/api/Quiz`;
+const RESULT_BASE_URL = `${API_URL}/api/Result`;
 
 function jsonHeaders(): HeadersInit {
   return {
@@ -22,9 +23,10 @@ function jsonHeaders(): HeadersInit {
 }
 
 // ======================================================
-// TYPE FOR TAKE QUIZ DTO (what backend returns)
+// TYPES FOR "TAKE QUIZ" DTO (what backend returns)
 // ======================================================
 
+// This matches QuizApi.DTOs.TakeQuizDto on the backend
 type TakeQuizApiDto = {
   id: number;
   subjectCode: string;
@@ -46,7 +48,7 @@ type TakeQuizApiDto = {
   }[];
 };
 
-// Result DTO from backend for "my results"
+// Result DTO from backend for "my results" list
 type ResultReadApiDto = {
   resultId: number;
   userId: string | null;
@@ -60,12 +62,26 @@ type ResultReadApiDto = {
 };
 
 // Payload we send when submitting a result
+// Now also includes all user's answers (questionId -> optionId)
 type ResultCreateApiDto = {
   quizId: number;
   correctCount: number;
   totalQuestions: number;
-  // userId is *not* needed, backend uses logged-in user
+  // questionId -> optionId (the *database id* of the chosen option)
+  answers: Record<number, number>;
 };
+
+// DTO returned by /api/Result/{resultId}/full
+// Used when opening a result from the Profile page.
+type FullResultApiDto = {
+  result: ResultReadApiDto;
+  quiz: TakeQuizApiDto;
+  // questionId -> optionId (database id of chosen option)
+  answers: Record<number, number>;
+};
+
+// Internal type used by frontend for "questionId -> chosen option index"
+export type AnswerMap = Record<number, number | null>;
 
 // ======================================================
 // GET ALL QUIZZES (SUMMARY)
@@ -104,6 +120,7 @@ export async function getQuiz(id: number): Promise<Quiz> {
 
   const raw = (await response.json()) as TakeQuizApiDto;
 
+  // Map backend DTO -> internal Quiz type
   const questions: Question[] = Array.isArray(raw.questions)
     ? raw.questions.map((q) => ({
         id: q.id,
@@ -214,7 +231,7 @@ export async function getMyQuizzes(): Promise<QuizSummary[]> {
 }
 
 // ======================================================
-// GET MY RESULTS (PROFILE PAGE)
+// GET MY RESULTS (PROFILE PAGE – SUMMARY LIST)
 // ======================================================
 
 export async function getMyResults(): Promise<QuizResult[]> {
@@ -239,9 +256,10 @@ export async function getMyResults(): Promise<QuizResult[]> {
 
   const raw = (await response.json()) as ResultReadApiDto[];
 
+  // Map backend DTO -> internal QuizResult type
   const mapped: QuizResult[] = raw.map((r) => ({
     resultId: r.resultId,
-    userId: r.userId,  
+    userId: r.userId ?? undefined,
     quizId: r.quizId,
     quizTitle: r.quizTitle,
     subjectCode: r.subjectCode,
@@ -279,4 +297,85 @@ export async function submitResult(
     );
     throw new Error(text || "Failed to submit quiz result.");
   }
+}
+
+// ======================================================
+// GET *FULL* RESULT (summary + quiz + answers)
+// Used when opening a result from the Profile page
+// so we can reuse the same QuizResultPage layout.
+// ======================================================
+
+export async function getFullResult(
+  resultId: number
+): Promise<{ result: QuizResult; quiz: Quiz; answers: AnswerMap }> {
+  const response = await fetch(`${RESULT_BASE_URL}/${resultId}/full`, {
+    method: "GET",
+    headers: jsonHeaders(),
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Failed to load full result (${response.status}).`);
+  }
+
+  const raw = (await response.json()) as FullResultApiDto;
+
+  // ----- Map quiz part -----
+  const questions: Question[] = Array.isArray(raw.quiz.questions)
+    ? raw.quiz.questions.map((q) => ({
+        id: q.id,
+        text: q.text,
+        imageUrl: q.imageUrl ?? undefined,
+        points: q.points ?? 1,
+        options: q.options.map((o) => ({
+          id: o.id,
+          text: o.text,
+          isCorrect: !!o.isCorrect,
+        })),
+      }))
+    : [];
+
+  const quiz: Quiz = {
+    id: raw.quiz.id,
+    subjectCode: raw.quiz.subjectCode ?? "",
+    title: raw.quiz.title ?? "Untitled quiz",
+    description: raw.quiz.description ?? "",
+    imageUrl: raw.quiz.imageUrl ?? "",
+    isPublished: raw.quiz.isPublished ?? false,
+    questions,
+  };
+
+  // ----- Map result summary -----
+  const result: QuizResult = {
+    resultId: raw.result.resultId,
+    userId: raw.result.userId ?? undefined,
+    quizId: raw.result.quizId,
+    quizTitle: raw.result.quizTitle,
+    subjectCode: raw.result.subjectCode,
+    correctCount: raw.result.correctCount,
+    totalQuestions: raw.result.totalQuestions,
+    percentage: raw.result.percentage,
+    completedAt: raw.result.completedAt,
+  };
+
+  // ----- Map answers: optionId -> index in options array -----
+  const answers: AnswerMap = {};
+
+  for (const q of questions) {
+    if (q.id == null) continue;
+
+    const optionId = raw.answers[q.id];
+
+    if (optionId == null) {
+      // User did not answer this question (or data missing)
+      answers[q.id] = null;
+      continue;
+    }
+
+    const idx = q.options.findIndex((o) => o.id === optionId);
+    answers[q.id] = idx >= 0 ? idx : null;
+  }
+
+  return { result, quiz, answers };
 }
