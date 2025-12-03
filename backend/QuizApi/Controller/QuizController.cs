@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using QuizApi.DAL;
 using QuizApi.Domain;
 using QuizApi.DTOs;
 using System.Security.Claims;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace QuizApi.Controllers
 {
@@ -13,12 +16,10 @@ namespace QuizApi.Controllers
     [Route("api/[controller]")]
     public class QuizController : ControllerBase
     {
-        private readonly ILogger<QuizController> _logger;
         private readonly QuizDbContext _db;
 
-        public QuizController(ILogger<QuizController> logger, QuizDbContext db)
+        public QuizController(QuizDbContext db)
         {
-            _logger = logger;
             _db = db;
         }
 
@@ -34,19 +35,16 @@ namespace QuizApi.Controllers
             [FromBody] QuizCreateDto dto,
             CancellationToken ct)
         {
-            // 1) Valider tittel
             if (string.IsNullOrWhiteSpace(dto.Title))
             {
                 ModelState.AddModelError(nameof(dto.Title), "Title is required.");
                 return ValidationProblem(ModelState);
             }
 
-            // 2) Normaliser fagkode
             var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
                 ? "OTHER"
                 : dto.SubjectCode.Trim().ToUpper();
 
-            // 3) Rydd opp i tekstfelter
             var description = string.IsNullOrWhiteSpace(dto.Description)
                 ? null
                 : dto.Description.Trim();
@@ -55,11 +53,9 @@ namespace QuizApi.Controllers
                 ? null
                 : dto.ImageUrl.Trim();
 
-            // 4) Hent innlogget bruker som eier
             var ownerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var now = DateTime.UtcNow;
 
-            // 5) Lag selve Quiz-entiteten
             var quizEntity = new Quiz
             {
                 Title       = dto.Title.Trim(),
@@ -73,10 +69,12 @@ namespace QuizApi.Controllers
                 OwnerId     = ownerId
             };
 
-            _db.Quizzes.Add(quizEntity);
-            await _db.SaveChangesAsync(ct); // trenger QuizId før vi kan lage spørsmål
+            await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-            // 6) Lag spørsmål + alternativer hvis noe ble sendt inn
+            _db.Quizzes.Add(quizEntity);
+            await _db.SaveChangesAsync(ct); // need QuizId for questions
+
+            // Create questions + options if provided
             if (dto.Questions != null && dto.Questions.Count > 0)
             {
                 foreach (var q in dto.Questions)
@@ -91,7 +89,7 @@ namespace QuizApi.Controllers
                     };
 
                     _db.Questions.Add(questionEntity);
-                    await _db.SaveChangesAsync(ct); // får QuestionId
+                    await _db.SaveChangesAsync(ct); // gets QuestionId
 
                     if (q.Options != null && q.Options.Count > 0)
                     {
@@ -115,7 +113,8 @@ namespace QuizApi.Controllers
                 }
             }
 
-            // 7) Bygg read-DTO til respons
+            await tx.CommitAsync(ct);
+
             var read = new QuizReadDto(
                 Id:            quizEntity.QuizId,
                 Title:         quizEntity.Title,
@@ -179,6 +178,15 @@ namespace QuizApi.Controllers
 
             if (quiz is null) return NotFound();
 
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isOwner = !string.IsNullOrEmpty(currentUserId) &&
+                          !string.IsNullOrEmpty(quiz.OwnerId) &&
+                          quiz.OwnerId == currentUserId;
+            if (!quiz.IsPublished && !isOwner)
+            {
+                return Forbid();
+            }
+
             var dto = new TakeQuizDto
             {
                 Id          = quiz.QuizId,
@@ -219,6 +227,8 @@ namespace QuizApi.Controllers
             [FromQuery] string? search,
             CancellationToken ct)
         {
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var query = _db.Quizzes
                 .Include(q => q.Questions)
                 .AsNoTracking()
@@ -226,6 +236,16 @@ namespace QuizApi.Controllers
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(q => q.Title.Contains(search));
+
+            // Anonymous users only see published quizzes. Owners also see drafts.
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                query = query.Where(q => q.IsPublished);
+            }
+            else
+            {
+                query = query.Where(q => q.IsPublished || q.OwnerId == currentUserId);
+            }
 
             var items = await query
                 .OrderByDescending(q => q.CreatedAt)
@@ -388,8 +408,16 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var quizExists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
-            if (!quizExists) return NotFound();
+            var quiz = await _db.Quizzes.FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
+            if (quiz is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(quiz.OwnerId) &&
+                quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             var q = new Question { Text = dto.Text.Trim(), QuizId = quizId };
             _db.Questions.Add(q);
@@ -400,17 +428,27 @@ namespace QuizApi.Controllers
         }
 
         [HttpGet("{quizId:int}/questions/{questionId:int}")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<QuestionReadDto>> GetQuestion(
             int quizId,
             int questionId,
             CancellationToken ct)
         {
             var q = await _db.Questions
+                .Include(x => x.Quiz)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
 
             if (q is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(q.Quiz.OwnerId) &&
+                q.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
+
             return Ok(new QuestionReadDto(q.QuestionId, q.Text, q.QuizId));
         }
 
@@ -427,6 +465,14 @@ namespace QuizApi.Controllers
                 .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
 
             if (q is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(q.Quiz!.OwnerId) &&
+                q.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             if (string.IsNullOrWhiteSpace(dto.Text))
             {
@@ -446,8 +492,19 @@ namespace QuizApi.Controllers
             int questionId,
             CancellationToken ct)
         {
-            var q = await _db.Questions.FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
+            var q = await _db.Questions
+                .Include(x => x.Quiz)
+                .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
+
             if (q is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(q.Quiz!.OwnerId) &&
+                q.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             _db.Questions.Remove(q);
             await _db.SaveChangesAsync(ct);
@@ -479,8 +536,17 @@ namespace QuizApi.Controllers
             }
 
             var question = await _db.Questions
+                .Include(x => x.Quiz)
                 .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
             if (question is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(question.Quiz!.OwnerId) &&
+                question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             var o = new Option { QuestionId = questionId, Text = dto.Text.Trim(), IsCorrect = dto.IsCorrect };
             _db.Options.Add(o);
@@ -492,7 +558,7 @@ namespace QuizApi.Controllers
         }
 
         [HttpGet("{quizId:int}/questions/{questionId:int}/options/{optionId:int}")]
-        [AllowAnonymous]
+        [Authorize]
         public async Task<ActionResult<OptionReadDto>> GetOption(
             int quizId,
             int questionId,
@@ -500,9 +566,20 @@ namespace QuizApi.Controllers
             CancellationToken ct)
         {
             var o = await _db.Options.AsNoTracking()
+                .Include(x => x.Question)
+                .ThenInclude(q => q!.Quiz)
                 .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
 
             if (o is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                o.Question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
+
             return Ok(new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
         }
 
@@ -521,6 +598,14 @@ namespace QuizApi.Controllers
                 .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
 
             if (o is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                o.Question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             if (string.IsNullOrWhiteSpace(dto.Text))
             {
@@ -542,8 +627,19 @@ namespace QuizApi.Controllers
             int optionId,
             CancellationToken ct)
         {
-            var o = await _db.Options.FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
+            var o = await _db.Options
+                .Include(x => x.Question)
+                .ThenInclude(q => q!.Quiz)
+                .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
             if (o is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                o.Question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             _db.Options.Remove(o);
             await _db.SaveChangesAsync(ct);
@@ -567,69 +663,91 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            if (dto.TotalQuestions < 1)
+            var quiz = await _db.Quizzes
+                .Include(q => q.Questions)
+                    .ThenInclude(q => q.Options)
+                .FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
+            if (quiz is null) return NotFound();
+
+            if (!quiz.IsPublished)
             {
-                ModelState.AddModelError("TotalQuestions", "TotalQuestions must be at least 1.");
-                return ValidationProblem(ModelState);
+                return Forbid();
             }
 
-            if (dto.CorrectCount < 0 || dto.CorrectCount > dto.TotalQuestions)
-            {
-                ModelState.AddModelError("CorrectCount", "CorrectCount must be between 0 and TotalQuestions.");
-                return ValidationProblem(ModelState);
-            }
-
-            var exists = await _db.Quizzes.AnyAsync(q => q.QuizId == quizId, ct);
-            if (!exists) return NotFound();
-
-            // Hent innlogget bruker fra cookie/claims
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var questions = quiz.Questions.OrderBy(q => q.QuestionId).ToList();
+            var totalQuestions = questions.Count;
+
+            if (totalQuestions < 1)
+            {
+                ModelState.AddModelError("TotalQuestions", "Quiz has no questions.");
+                return ValidationProblem(ModelState);
+            }
+
+            var answersPayload = dto.Answers ?? new Dictionary<int, int>();
+            var resultAnswers = new List<ResultAnswer>();
+            var correctCount = 0;
+
+            foreach (var question in questions)
+            {
+                if (!answersPayload.TryGetValue(question.QuestionId, out var chosenOptionId))
+                {
+                    continue; // unanswered
+                }
+
+                var chosenOption = question.Options.FirstOrDefault(o => o.OptionID == chosenOptionId);
+                if (chosenOption is null)
+                {
+                    ModelState.AddModelError("Answers", $"Option {chosenOptionId} does not belong to question {question.QuestionId}.");
+                    return ValidationProblem(ModelState);
+                }
+
+                resultAnswers.Add(new ResultAnswer
+                {
+                    QuestionId = question.QuestionId,
+                    OptionId   = chosenOption.OptionID
+                });
+
+                if (chosenOption.IsCorrect)
+                {
+                    correctCount += 1;
+                }
+            }
 
             var result = new Result
             {
                 UserId         = userId,
                 QuizId         = dto.QuizId,
-                CorrectCount   = dto.CorrectCount,
-                TotalQuestions = dto.TotalQuestions,
+                CorrectCount   = correctCount,
+                TotalQuestions = totalQuestions,
                 CompletedAt    = DateTime.UtcNow
-                // Percentage er read-only (NotMapped) -> beregnes automatisk
             };
 
             _db.Results.Add(result);
-            await _db.SaveChangesAsync(ct); // trenger ResultId før vi lagrer answers
+            await _db.SaveChangesAsync(ct); // need ResultId for answers
 
-            // lagre alle brukerens svar (én rad per spørsmål)
-            if (dto.Answers != null && dto.Answers.Count > 0)
+            if (resultAnswers.Count > 0)
             {
-                foreach (var kvp in dto.Answers)
+                foreach (var answer in resultAnswers)
                 {
-                    var questionId = kvp.Key;
-                    var optionId   = kvp.Value;
-
-                    var answerEntity = new ResultAnswer
-                    {
-                        ResultId   = result.ResultId,
-                        QuestionId = questionId,
-                        OptionId   = optionId
-                    };
-
-                    _db.ResultAnswers.Add(answerEntity);
+                    answer.ResultId = result.ResultId;
+                    _db.ResultAnswers.Add(answer);
                 }
 
                 await _db.SaveChangesAsync(ct);
             }
 
-            // Hent quiz for å kunne sette tittel/fagkode på DTO
-            var quiz = await _db.Quizzes.AsNoTracking()
+            var readQuiz = await _db.Quizzes.AsNoTracking()
                 .FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
 
             var read = new ResultReadDto(
                 ResultId:       result.ResultId,
                 UserId:         result.UserId,
                 QuizId:         result.QuizId,
-                QuizTitle:      quiz?.Title ?? string.Empty,
-                SubjectCode:    quiz?.SubjectCode ?? string.Empty,
+                QuizTitle:      readQuiz?.Title ?? string.Empty,
+                SubjectCode:    readQuiz?.SubjectCode ?? string.Empty,
                 CorrectCount:   result.CorrectCount,
                 TotalQuestions: result.TotalQuestions,
                 CompletedAt:    result.CompletedAt,

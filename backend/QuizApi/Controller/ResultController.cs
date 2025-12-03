@@ -5,6 +5,8 @@ using QuizApi.DAL;
 using QuizApi.DTOs;
 using System.Security.Claims;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace QuizApi.Controllers
 {
@@ -21,7 +23,7 @@ namespace QuizApi.Controllers
         }
 
         // GET: /api/Result/{resultId}/full
-        // Fullt resultat: summary + quiz-struktur + alle answers
+        // Full result: summary + quiz structure + all answers
         [HttpGet("{resultId:int}/full")]
         public async Task<ActionResult<FullResultDto>> GetFullResult(
             int resultId,
@@ -40,7 +42,7 @@ namespace QuizApi.Controllers
 
             if (result is null) return NotFound();
 
-            // 1) Map summary-delen
+            // 1) Map the summary part
             var resultDto = new ResultReadDto(
                 ResultId:       result.ResultId,
                 UserId:         result.UserId,
@@ -53,7 +55,7 @@ namespace QuizApi.Controllers
                 Percentage:     result.Percentage
             );
 
-            // 2) Map quiz-delen til samme TakeQuizDto som /api/quiz/{id}/take
+            // 2) Map the quiz part to the same TakeQuizDto as /api/quiz/{id}/take
             var quizEntity = result.Quiz!;
 
             var quizDto = new TakeQuizDto
@@ -70,7 +72,7 @@ namespace QuizApi.Controllers
                     {
                         Id       = q.QuestionId,
                         Text     = q.Text,
-                        ImageUrl = null,   // sett til q.ImageUrl hvis du begynner å bruke det
+                        ImageUrl = null,   // set to q.ImageUrl if you start using it
                         Points   = 1,
                         Options  = q.Options
                             .OrderBy(o => o.OptionID)

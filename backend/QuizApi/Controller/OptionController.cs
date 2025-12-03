@@ -6,6 +6,7 @@ using QuizApi.DAL;
 using QuizApi.Domain;
 using QuizApi.DTOs;
 using System.Security.Claims;
+using System.Linq;
 
 namespace QuizApi.Controllers
 {
@@ -43,8 +44,18 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
-            var question = await _db.Questions.FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
+            var question = await _db.Questions
+                .Include(q => q.Quiz)
+                .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);
             if (question is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(question.Quiz!.OwnerId) &&
+                question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             var o = new Option { QuestionId = questionId, Text = dto.Text.Trim(), IsCorrect = dto.IsCorrect };
             _db.Options.Add(o);
@@ -62,9 +73,21 @@ namespace QuizApi.Controllers
         public async Task<ActionResult<OptionReadDto>> GetOption(int quizId, int questionId, int optionId, CancellationToken ct)
         {
             var o = await _db.Options.AsNoTracking()
+                .Include(x => x.Question)
+                .ThenInclude(q => q!.Quiz)
                 .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
 
             if (o is null) return NotFound();
+
+            // Only owner or published quiz can read through this controller
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var isOwner = !string.IsNullOrEmpty(ownerClaim) &&
+                          !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                          o.Question.Quiz.OwnerId == ownerClaim;
+            if (!isOwner && !o.Question.Quiz.IsPublished)
+            {
+                return Forbid();
+            }
             return Ok(new OptionReadDto(o.OptionID, o.Text, o.IsCorrect, o.QuestionId));
             // Returns 200 OK with the option
         }
@@ -81,6 +104,14 @@ namespace QuizApi.Controllers
                 .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
 
             if (o is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                o.Question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             if (string.IsNullOrWhiteSpace(dto.Text))
             {
@@ -101,8 +132,19 @@ namespace QuizApi.Controllers
         [Authorize]
         public async Task<IActionResult> DeleteOption(int quizId, int questionId, int optionId, CancellationToken ct)
         {
-            var o = await _db.Options.FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
+            var o = await _db.Options
+                .Include(x => x.Question)
+                .ThenInclude(q => q!.Quiz)
+                .FirstOrDefaultAsync(x => x.OptionID == optionId && x.QuestionId == questionId, ct);
             if (o is null) return NotFound();
+
+            var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!string.IsNullOrEmpty(ownerClaim) &&
+                !string.IsNullOrEmpty(o.Question!.Quiz!.OwnerId) &&
+                o.Question.Quiz.OwnerId != ownerClaim)
+            {
+                return Forbid();
+            }
 
             _db.Options.Remove(o);
             await _db.SaveChangesAsync(ct);

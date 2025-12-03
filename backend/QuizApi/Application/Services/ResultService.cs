@@ -41,7 +41,7 @@ public class ResultService : IResultService
             UserId         = dto.UserId,
             QuizId         = dto.QuizId,
             CorrectCount   = dto.CorrectCount,
-            TotalQuestions = Math.Max(dto.CorrectCount, 1),
+            TotalQuestions = dto.TotalQuestions,
             CompletedAt    = DateTime.UtcNow
         };
 
@@ -136,6 +136,8 @@ public class ResultService : IResultService
         if (dto is null) throw new ArgumentNullException(nameof(dto));
         if (string.IsNullOrWhiteSpace(dto.UserId)) throw new ArgumentException("UserId must be provided", nameof(dto.UserId));
         if (dto.QuizId <= 0) throw new ArgumentException("QuizId must be > 0", nameof(dto.QuizId));
+        if (dto.TotalQuestions < 1) throw new ArgumentException("TotalQuestions must be at least 1", nameof(dto.TotalQuestions));
         if (dto.CorrectCount < 0) throw new ArgumentException("Score cannot be negative", nameof(dto.CorrectCount));
+        if (dto.CorrectCount > dto.TotalQuestions) throw new ArgumentException("Score cannot exceed total questions", nameof(dto.CorrectCount));
     }
 }

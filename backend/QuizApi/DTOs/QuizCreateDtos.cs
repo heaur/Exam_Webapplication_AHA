@@ -3,22 +3,21 @@ using System.Collections.Generic;
 
 namespace QuizApi.DTOs
 {
-    // ------------------- CREATE (inkl. spørsmål + alternativer) -------------------
+    // ------------------- CREATE (includes questions + options) -------------------
 
-    // Enkelt alternativ for et spørsmål når vi OPPRETTER quiz
+    // Single option for a question when creating a quiz
     public record CreateOptionDto(
         string Text,
         bool IsCorrect
     );
 
-    // Spørsmål når vi OPPRETTER quiz
+    // Question when creating a quiz
     public record CreateQuestionDto(
         string Text,
         List<CreateOptionDto> Options
     );
 
-    // DTO brukt når frontend OPPRETTER en ny quiz.
-    // Frontend sender også med questions + options i body-en.
+    // DTO used when the frontend creates a new quiz, including questions + options in the body
     public record QuizCreateDto(
         string Title,
         string SubjectCode,
@@ -27,7 +26,7 @@ namespace QuizApi.DTOs
         List<CreateQuestionDto> Questions
     );
 
-    // ------------------- READ (liste / detaljer) -------------------
+    // ------------------- READ (list / details) -------------------
 
     public record QuizReadDto(
         int Id,
@@ -43,7 +42,7 @@ namespace QuizApi.DTOs
         int QuestionCount
     );
 
-    // ------------------- UPDATE (kun metadata) -------------------
+    // ------------------- UPDATE (metadata only) -------------------
 
     public record QuizUpdateDto(
         string Title,
