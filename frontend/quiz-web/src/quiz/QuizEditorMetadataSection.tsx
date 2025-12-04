@@ -21,7 +21,7 @@ const QuizEditorMetadataSection: React.FC<Props> = ({
 }) => {
   return (
     <section className="quiz-editor-section">
-      <h2 className="page-description" style={{ marginBottom: "0.75rem" }}>
+      <h2 className="page-description" >
         Quiz settings
       </h2>
 

@@ -39,7 +39,7 @@ const QuizEditorQuestionItem: React.FC<Props> = ({
   }
 
   return (
-    <div className="quiz-question-card" style={{ marginTop: "1rem" }}>
+    <div className="quiz-question-card quiz-question-card--spaced">
       <div className="quiz-question-header">
         <p className="quiz-question-index">Question {index + 1}</p>
         <button

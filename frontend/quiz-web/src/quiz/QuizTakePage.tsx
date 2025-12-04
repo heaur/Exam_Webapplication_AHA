@@ -92,7 +92,7 @@ const QuizTakePage: React.FC = () => {
 
     let correctCount = 0;
     let totalQuestions = 0;
-    let score = 0; // currently only kept locally
+    let score = 0; // local score
     let maxScore = 0; // sum of question points
 
     // Answers payload for backend: questionId -> optionId (DB id)
@@ -103,7 +103,8 @@ const QuizTakePage: React.FC = () => {
       if (qId == null) continue;
 
       totalQuestions += 1;
-      maxScore += question.points;
+      const points = question.points ?? 1;
+      maxScore += points;
 
       const chosenIndex = answers[qId];
       const correctIndex = question.options.findIndex(
@@ -121,13 +122,13 @@ const QuizTakePage: React.FC = () => {
       // Local scoring logic
       if (chosenIndex != null && chosenIndex === correctIndex) {
         correctCount += 1;
-        score += question.points;
+        score += points;
       }
     }
 
     // 1) Persist result in backend (summary + per-question answers)
     try {
-      await submitResult(quiz.id, {
+      await submitResult({
         quizId: quiz.id,
         correctCount,
         totalQuestions,

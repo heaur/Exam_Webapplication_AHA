@@ -344,3 +344,44 @@
   opacity: 0.6;
 }
 
+/* ===== Quiz editor styles ===== */
+
+/* Make option input expand to fill available space */
+.quiz-option-input {
+  flex: 1;
+}
+
+/* Space above options list */
+.quiz-options-editor--spaced {
+  margin-top: 1rem;
+}
+
+/* Space between question cards in quiz editor */
+.quiz-question-card--spaced {
+  margin-top: 1rem;
+}
+
+/* Add spacing above the whole question list section */
+.quiz-question-list--spaced {
+  margin-top: 2rem;
+}
+
+/* Heading inside question list */
+.quiz-question-list-heading {
+  margin-bottom: 0;
+}
+
+/* Message shown when list is empty */
+.quiz-question-list-empty {
+  margin-top: 0.75rem;
+}
+
+/* Remove padding from <ol> */
+.quiz-editor-question-list--no-padding {
+  padding-left: 0;
+}
+
+/* Remove bullet styling from <li> */
+.quiz-editor-question-list-item {
+  list-style: none;
+}

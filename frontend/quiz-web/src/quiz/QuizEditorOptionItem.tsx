@@ -52,7 +52,7 @@ const QuizEditorOptionItem: React.FC<Props> = ({
         disabled={saving}
         onChange={(e) => updateField("text", e.target.value)}
         placeholder={`Option ${index + 1}`}
-        style={{ flex: 1 }}
+        className="quiz-option-input"
       />
 
       <button

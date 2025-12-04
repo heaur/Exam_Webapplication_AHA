@@ -1,8 +1,5 @@
 // src/quiz/QuizEditorQuestionList.tsx
 // ---------------------------------------------------------
-// Renders the list of questions and the "Add question" button.
-// Each question row is delegated to QuizEditorQuestionItem.
-// ---------------------------------------------------------
 
 import React from "react";
 import type { Question, Option } from "../types/quiz";
@@ -36,9 +33,9 @@ const QuizEditorQuestionList: React.FC<Props> = ({
   markOptionAsCorrect,
 }) => {
   return (
-    <section className="quiz-editor-section" style={{ marginTop: "2rem" }}>
+    <section className="quiz-editor-section quiz-question-list--spaced">
       <div className="page-header">
-        <h2 className="page-description" style={{ marginBottom: 0 }}>
+        <h2 className="page-description quiz-question-list-heading">
           Questions
         </h2>
         <button
@@ -52,15 +49,15 @@ const QuizEditorQuestionList: React.FC<Props> = ({
       </div>
 
       {questions.length === 0 && (
-        <p className="page-description" style={{ marginTop: "0.75rem" }}>
+        <p className="page-description quiz-question-list-empty">
           No questions yet. Click <strong>“Add question”</strong> to start
           building your quiz.
         </p>
       )}
 
-      <ol className="quiz-editor-question-list" style={{ paddingLeft: 0 }}>
+      <ol className="quiz-editor-question-list quiz-editor-question-list--no-padding">
         {questions.map((q, index) => (
-          <li key={q.id ?? index} style={{ listStyle: "none" }}>
+          <li key={q.id ?? index} className="quiz-editor-question-list-item">
             <QuizEditorQuestionItem
               question={q}
               index={index}

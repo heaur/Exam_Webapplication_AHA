@@ -277,7 +277,6 @@ export async function getMyResults(): Promise<QuizResult[]> {
 // ======================================================
 
 export async function submitResult(
-  quizId: number,
   payload: ResultCreateApiDto
 ): Promise<void> {
   const response = await fetch(`${RESULT_BASE_URL}`, {

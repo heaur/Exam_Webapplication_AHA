@@ -27,7 +27,7 @@ const QuizEditorOptionsList: React.FC<Props> = ({
   markOptionAsCorrect,
 }) => {
   return (
-    <div className="quiz-options-editor" style={{ marginTop: "1rem" }}>
+    <div className="quiz-options-editor quiz-options-editor--spaced">
       <div className="quiz-question-header">
         <span>Answer options</span>
         <button
