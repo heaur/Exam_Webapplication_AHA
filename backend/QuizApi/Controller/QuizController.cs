@@ -40,6 +40,7 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            // Normalise optional fields before persisting
             var subjectCode = string.IsNullOrWhiteSpace(dto.SubjectCode)
                 ? "OTHER"
                 : dto.SubjectCode.Trim().ToUpper();
@@ -68,6 +69,7 @@ namespace QuizApi.Controllers
                 OwnerId     = ownerId
             };
 
+            // One transaction so nested questions/options are consistent
             await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
             _db.Quizzes.Add(quizEntity);

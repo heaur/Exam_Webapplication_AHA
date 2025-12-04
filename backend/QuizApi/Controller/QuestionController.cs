@@ -39,6 +39,7 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            // Verify quiz exists and caller is the owner
             var quiz = await _db.Quizzes.FirstOrDefaultAsync(q => q.QuizId == quizId, ct);
             if (quiz is null) return NotFound();
 
@@ -70,6 +71,7 @@ namespace QuizApi.Controllers
 
             if (q is null) return NotFound();
 
+            // Owner can view drafts; others only if quiz is published
             var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var isOwner = !string.IsNullOrEmpty(ownerClaim) &&
                           !string.IsNullOrEmpty(q.Quiz?.OwnerId) &&
@@ -93,6 +95,7 @@ namespace QuizApi.Controllers
 
             if (q is null) return NotFound();
 
+            // Only quiz owner can modify
             var ownerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!string.IsNullOrEmpty(ownerClaim) &&
                 !string.IsNullOrEmpty(q.Quiz!.OwnerId) &&

@@ -27,9 +27,7 @@ public class UserController : ControllerBase
         _logger = logger;
     }
 
-    // =========================================================
     // REGISTER / LOGIN / LOGOUT
-    // =========================================================
 
     // POST /api/user/register
     // Creates a new Identity user and signs them in.
@@ -174,9 +172,7 @@ public class UserController : ControllerBase
         return NoContent();
     }
 
-    // =========================================================
     // PROFILE / ACCOUNT
-    // =========================================================
 
     // GET /api/user/me
     // Returns minimal info about the current user.
@@ -332,6 +328,7 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
+        // Delete account after explicit password confirmation
         var result = await _userManager.DeleteAsync(user);
         if (!result.Succeeded)
         {
@@ -347,9 +344,7 @@ public class UserController : ControllerBase
         return NoContent();
     }
 
-    // =========================================================
     // UTILITY ENDPOINTS
-    // =========================================================
 
     // GET /api/user/check-username?username=alice
     // Quick availability check for UI when user picks a username.
@@ -388,6 +383,7 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
+        // Extend session by renewing auth cookie
         await _signInManager.RefreshSignInAsync(user);
         return NoContent();
     }

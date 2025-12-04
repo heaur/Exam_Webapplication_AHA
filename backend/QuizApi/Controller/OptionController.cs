@@ -44,6 +44,7 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            // Ensure question exists and caller is the quiz owner
             var question = await _db.Questions
                 .Include(q => q.Quiz)
                 .FirstOrDefaultAsync(x => x.QuestionId == questionId && x.QuizId == quizId, ct);

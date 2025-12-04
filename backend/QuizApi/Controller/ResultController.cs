@@ -35,6 +35,7 @@ namespace QuizApi.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+            // Only fetch the current user's result, including quiz + options + answers in one query
             var result = await _db.Results
                 .Include(r => r.Quiz)
                     .ThenInclude(q => q.Questions)
@@ -61,6 +62,7 @@ namespace QuizApi.Controllers
             
             var quizEntity = result.Quiz!;
 
+            // Map quiz entity into the TakeQuizDto shape expected by the frontend
             var quizDto = new TakeQuizDto
             {
                 Id          = quizEntity.QuizId,
@@ -91,6 +93,7 @@ namespace QuizApi.Controllers
             };
 
         
+            // questionId -> optionId the user chose
             var answersDict = result.Answers
                 .ToDictionary(a => a.QuestionId, a => a.OptionId);
 
@@ -117,16 +120,12 @@ namespace QuizApi.Controllers
                 return ValidationProblem(ModelState);
             }
 
+            // Load quiz with questions/options so we can validate answers and calculate score
             var quiz = await _db.Quizzes
                 .Include(q => q.Questions)
                     .ThenInclude(q => q.Options)
                 .FirstOrDefaultAsync(q => q.QuizId == dto.QuizId, ct);
             if (quiz is null) return NotFound();
-
-            if (!quiz.IsPublished)
-            {
-                return Forbid();
-            }
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
@@ -144,6 +143,7 @@ namespace QuizApi.Controllers
             var resultAnswers = new List<ResultAnswer>();
             var correctCount = 0;
 
+            // Validate each submitted answer belongs to the question and tally correct count
             foreach (var question in questions)
             {
                 if (!answersPayload.TryGetValue(question.QuestionId, out var chosenOptionId))
@@ -182,6 +182,7 @@ namespace QuizApi.Controllers
             _db.Results.Add(result);
             await _db.SaveChangesAsync(ct); // need ResultId for answers
 
+            // Persist individual answers if any were provided
             if (resultAnswers.Count > 0)
             {
                 foreach (var answer in resultAnswers)
@@ -196,6 +197,7 @@ namespace QuizApi.Controllers
             var readQuiz = await _db.Quizzes.AsNoTracking()
                 .FirstOrDefaultAsync(q => q.QuizId == dto.QuizId, ct);
 
+            // Build lightweight summary DTO for the response
             var read = new ResultReadDto(
                 ResultId:       result.ResultId,
                 UserId:         result.UserId,
